@@ -343,10 +343,10 @@ html.no-scroll, html.no-scroll body { overflow: hidden; }
 .g-loading { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; font-family: var(--mono); font-size: 12px; letter-spacing: 0.12em; color: var(--muted); }
 .globe.ready .g-loading { display: none; }
 .g-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-.g-lbl { position: absolute; left: 0; top: 0; margin: -22px 0 0 8px; white-space: nowrap; font-size: 11px; padding: 1px 6px; background: rgba(2, 8, 16, 0.8); border: 1px solid rgba(var(--hud-rgb), 0.5); color: #fff; }
-.g-lbl.iss { border-color: #fff; font-family: var(--mono); letter-spacing: 0.1em; }
-.g-lbl.me { border-color: #2ee6a6; color: #2ee6a6; }
-.g-lbl.storm { border-color: #ff8a3d; }
+.gl-tag { position: absolute; left: 0; top: 0; margin: -22px 0 0 8px; white-space: nowrap; font-size: 11px; padding: 1px 6px; background: rgba(2, 8, 16, 0.8); border: 1px solid rgba(var(--hud-rgb), 0.5); color: #fff; }
+.gl-tag.iss { border-color: #fff; font-family: var(--mono); letter-spacing: 0.1em; }
+.gl-tag.me { border-color: #2ee6a6; color: #2ee6a6; }
+.gl-tag.storm { border-color: #ff8a3d; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chips button { background: rgba(var(--hud-rgb), 0.05); border: 1px solid rgba(var(--hud-rgb), 0.3); padding: 6px 10px; font-size: 12.5px; cursor: pointer; color: var(--muted); }
 .chips button.on { background: rgba(var(--hud-rgb), 0.18); border-color: var(--hud); color: #fff; }
@@ -616,4 +616,23 @@ html.no-scroll, html.no-scroll body { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .blip, .apps::before, .apps.editing .app i { animation: none; }
   .pnl.on { animation: none; }
+}
+
+/* ===== มือถือแนวนอน: แผงเสริม (07–14) จัดเนื้อหาเป็น 2 คอลัมน์ไหลต่อกัน ใช้จอเต็มความกว้าง ===== */
+@media (orientation: landscape) and (max-height: 520px) {
+  .pnl.mod.on { display: block; column-count: 2; column-gap: 14px; }
+  .pnl.mod.on > * { break-inside: avoid; margin: 0 0 10px; }
+  .pnl.mod.on > .ph { column-span: all; }
+  .pnl.mod.on .sn-grid { display: contents; }            /* การ์ดเซนเซอร์แต่ละใบกลายเป็นชิ้นในคอลัมน์ */
+  .pnl.mod.on .sn-card { break-inside: avoid; margin-bottom: 10px; }
+  .globe { height: calc(100dvh - 96px); }                 /* ลูกโลกสูงพอดีจอ */
+  .cam-view { aspect-ratio: 4 / 3; max-height: calc(100dvh - 96px); }
+  .moon-wrap { grid-template-columns: 1fr; }
+  .moon3d { width: min(100%, calc(100dvh - 140px)); margin: 0 auto; }
+  .tm-ring { width: min(42vw, calc(100dvh - 150px)); }
+  .sn-rose, .sn-viz { width: min(40vw, calc(100dvh - 160px)); }
+  .sn-level { width: min(40vw, calc(100dvh - 180px), 190px); height: auto; aspect-ratio: 1; }
+  /* หน้าหลัก: ย่อวงให้ปุ่มรายงานไม่ล้นจอ */
+  #p-home .reactor { width: min(36vw, calc(100dvh - 135px)); }
+  #p-home .report-btn { margin-top: 4px; }
 }

@@ -106,7 +106,7 @@ function resize() {
 // ---------- ป้ายชื่อ (HTML ซ้อนบนลูกโลก ซ่อนเมื่ออยู่หลังโลก) ----------
 function addLabel(text, pos, cls) {
   const el = document.createElement('span');
-  el.className = `g-lbl ${cls || ''}`;
+  el.className = `gl-tag ${cls || ''}`;
   el.textContent = text;
   labelsEl.append(el);
   const l = { el, pos: pos.clone() };
