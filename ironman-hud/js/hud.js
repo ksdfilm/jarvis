@@ -1,4 +1,4 @@
-// JARVIS HUD: แผง 01–05 สลับด้วยหน้าปัดหมุน · อากาศ/ฝน/ฝุ่นจริงจาก Open-Meteo (ฟรี ไม่ต้องใช้คีย์) · ทางลัดเปิดแอป
+// EDIT HUD: แผง 01–05 สลับด้วยหน้าปัดหมุน · อากาศ/ฝน/ฝุ่นจริงจาก Open-Meteo (ฟรี ไม่ต้องใช้คีย์) · ทางลัดเปิดแอป
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 const NS = 'http://www.w3.org/2000/svg';
@@ -33,7 +33,7 @@ $('#reactor').addEventListener('click', () => {
 let userName = store.get('name', 'SIR');
 $('#name').textContent = userName;
 $('#name-btn').addEventListener('click', () => {
-  const v = prompt('ให้ JARVIS เรียกคุณว่าอะไร?', userName);
+  const v = prompt('ให้ EDIT เรียกคุณว่าอะไร?', userName);
   if (v && v.trim()) { userName = v.trim().slice(0, 18).toUpperCase(); $('#name').textContent = userName; store.set('name', userName); }
 });
 
@@ -577,7 +577,7 @@ renderWeather();
 loadWeather();
 setInterval(loadWeather, 15 * 60 * 1000);
 // เปิดได้แม้ไม่มีเน็ต (เฉพาะ https เช่นบน GitHub Pages)
-if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) return;

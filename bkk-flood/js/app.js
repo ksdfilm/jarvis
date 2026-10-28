@@ -5,7 +5,7 @@ const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// ฝังในแอป JARVIS HUD (?embed): จัดหน้าให้พอดีจอเล็ก และหยุดทำงานเมื่อแอปแม่ซ่อนแผงนี้ (ประหยัดแบต)
+// ฝังในแอป EDIT HUD (?embed): จัดหน้าให้พอดีจอเล็ก และหยุดทำงานเมื่อแอปแม่ซ่อนแผงนี้ (ประหยัดแบต)
 const EMBED = new URLSearchParams(location.search).has('embed');
 if (EMBED) document.body.classList.add('embed');
 let hiddenByHost = false;

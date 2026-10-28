@@ -1,6 +1,6 @@
 {
-  "name": "JARVIS HUD",
-  "short_name": "JARVIS",
+  "name": "EDIT HUD",
+  "short_name": "EDIT",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#02070d",

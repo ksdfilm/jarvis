@@ -161,7 +161,7 @@ button { font: inherit; color: inherit; }
   .pin .ring, .banner { animation: none !important; }
 }
 
-/* โหมดฝังในแอป JARVIS HUD (?embed): เหลือแค่แถบสถานะ ปุ่มเล็กลง ไม่มีแถบสี */
+/* โหมดฝังในแอป EDIT HUD (?embed): เหลือแค่แถบสถานะ ปุ่มเล็กลง ไม่มีแถบสี */
 body.embed .title { top: 8px; }
 body.embed .title h1, body.embed .title p { display: none; }
 body.embed .banner { margin-top: 0; font-size: 12px; }

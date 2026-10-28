@@ -11,7 +11,7 @@
   --dial-h: 96px;
   --aq: #5f8fa8; /* สีตามระดับฝุ่น ตั้งจาก JS */
 }
-/* ธีม: JARVIS ฟ้า (ค่าเริ่มต้น) / MARK แดงทอง — แตะวงกลางเพื่อสลับ */
+/* ธีม: ฟ้า (ค่า jarvis) (ค่าเริ่มต้น) / MARK แดงทอง — แตะวงกลางเพื่อสลับ */
 body[data-theme="jarvis"] { --hud: #3fd8ff; --hud-rgb: 63, 216, 255; --acc: #ff3b5c; }
 body[data-theme="mark"]   { --hud: #ff5a3c; --hud-rgb: 255, 90, 60;  --acc: #ffc94a; }
 
