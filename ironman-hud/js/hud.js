@@ -48,14 +48,24 @@ citySel.innerHTML = (CAN_GPS ? '<option value="gps">📍 ตำแหน่ง�
 }
 citySel.addEventListener('change', () => { store.set('city', citySel.value); loadWeather(); });
 
+/** ข้อความแจ้งเตือนสั้นๆ ที่หายไปเอง */
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.setAttribute('role', 'status');
+  t.textContent = msg;
+  document.body.append(t);
+  setTimeout(() => t.remove(), 7000);
+}
+
 /** ตำแหน่งที่จะดึงอากาศ: [ชื่อ, lat, lon] */
 function getPlace() {
   if (citySel.value !== 'gps') return Promise.resolve(CITIES[+citySel.value]);
   return new Promise((resolve) => navigator.geolocation.getCurrentPosition(
     (p) => resolve(['ตำแหน่งปัจจุบัน', +p.coords.latitude.toFixed(3), +p.coords.longitude.toFixed(3)]),
     () => {
-      // ไม่อนุญาต/หาไม่เจอ → กลับไปใช้กรุงเทพฯ
-      alert('ใช้ตำแหน่งไม่ได้ (ยังไม่อนุญาต หรือปิด Location Services อยู่)\nเปลี่ยนเป็นกรุงเทพฯ ให้ก่อน\n\nเปิดได้ที่: ตั้งค่า → ความเป็นส่วนตัว → บริการหาตำแหน่ง → Safari');
+      // ไม่อนุญาต/หาไม่เจอ → กลับไปใช้กรุงเทพฯ (แจ้งแบบไม่บล็อกหน้าจอ ไม่ใช้ alert)
+      toast('ใช้ตำแหน่งไม่ได้ จึงเปลี่ยนเป็นกรุงเทพฯ ให้ก่อน · เปิดได้ที่ ตั้งค่า → ความเป็นส่วนตัว → บริการหาตำแหน่ง → Safari');
       citySel.value = '0'; store.set('city', '0');
       resolve(CITIES[0]);
     },
@@ -139,7 +149,7 @@ const t0 = performance.now();
 function frame(t) {
   const now = new Date();
   tickClock(now);
-  if (current === 0) { // วงหมุนเฉพาะตอนอยู่หน้าหลัก ประหยัดแบต
+  if (current === 0 || DESKTOP.matches) { // วงหมุนเฉพาะตอนเห็นหน้าหลัก ประหยัดแบต
     if (!reduceMotion) {
       const k = (t - t0) / 1000;
       gOuter.setAttribute('transform', `rotate(${(k * 3) % 360} ${C} ${C})`);
@@ -164,19 +174,26 @@ const FLOOD_IDX = 5;
 const STEP = 22;           // องศาระหว่างหมายเลขบนหน้าปัด
 const PX_PER_ITEM = 260 * STEP * Math.PI / 180; // ลากนิ้วเท่านี้ = เลื่อน 1 ช่อง
 let current = 0, dialPos = 0, tween = null;
+// คอม/จอกว้าง = แดชบอร์ดเห็นทุกแผง · มือถือแนวนอน = หน้าปัดตั้งด้านขวา (ต้องตรงกับ @media ใน hud.css)
+const DESKTOP = matchMedia('(min-width: 1100px) and (min-height: 600px)');
+const LANDSCAPE = matchMedia('(orientation: landscape) and (max-height: 520px)');
 const dialItems = $('#dial-items'), dialRing = $('#dial-ring');
-dialItems.innerHTML = PANELS.map((p, i) => `<button type="button" class="dial-item" data-i="${i}" aria-label="${p.th}"><b>${pad(i + 1)}</b><small>${p.th}</small></button>`).join('');
+dialItems.innerHTML = PANELS.map((p, i) => `<button type="button" class="dial-item" data-i="${i}" aria-label="${p.th}"><span class="dl"><b>${pad(i + 1)}</b><small>${p.th}</small></span></button>`).join('');
 const dialBtns = $$('.dial-item');
 
 function renderDial() {
+  // แนวนอนกลับทิศ เพื่อให้แผงถัดไปอยู่ "ด้านล่าง" (หน้าปัดถูกหมุน -90°)
+  const dir = LANDSCAPE.matches ? -1 : 1;
   dialBtns.forEach((b, i) => {
     const d = i - dialPos;
-    b.style.transform = `rotate(${d * STEP}deg)`;
+    b.style.setProperty('--a', `${d * STEP * dir}deg`);
     b.style.opacity = Math.max(0, 1 - Math.abs(d) * 0.3);
     b.classList.toggle('on', Math.round(dialPos) === i);
   });
-  dialRing.style.transform = `rotate(${-dialPos * STEP}deg)`;
+  dialRing.style.transform = `rotate(${-dialPos * STEP * dir}deg)`;
 }
+LANDSCAPE.addEventListener('change', renderDial);
+DESKTOP.addEventListener('change', () => { syncFlood(current === FLOOD_IDX); drawHourly(); });
 function animateDial(to) {
   cancelAnimationFrame(tween);
   const from = dialPos, start = performance.now(), dur = reduceMotion ? 0 : 260;
@@ -190,6 +207,10 @@ function animateDial(to) {
 }
 function go(i) {
   i = Math.max(0, Math.min(PANELS.length - 1, i));
+  if (DESKTOP.matches && current !== i && PANELS[i]) { // คอม: ทุกแผงแสดงอยู่แล้ว แค่เลื่อนไปหา
+    document.getElementById(PANELS[i].id).scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+    return;
+  }
   const back = i < current;
   current = i;
   PANELS.forEach((p, k) => {
@@ -206,6 +227,7 @@ function go(i) {
 // แผนที่น้ำท่วม: โหลดครั้งแรกเมื่อเปิดแผง (ประหยัดเน็ต/แบต) และสั่งให้หยุดเมื่อออกจากแผง
 const floodFrame = $('#flood-frame');
 function syncFlood(visible) {
+  visible = visible || DESKTOP.matches; // คอมเห็นแผนที่ตลอด
   if (visible && !floodFrame.src) floodFrame.src = '../bkk-flood/?embed=1';
   if (floodFrame.src) floodFrame.contentWindow?.postMessage({ floodVisible: visible }, location.origin);
 }
@@ -216,14 +238,15 @@ const dial = $('#dial');
 let drag = null;
 dial.addEventListener('pointerdown', (e) => {
   cancelAnimationFrame(tween);
-  drag = { x: e.clientX, pos: dialPos, moved: 0, target: e.target.closest('.dial-item') };
+  drag = { x: e.clientX, y: e.clientY, pos: dialPos, moved: 0, target: e.target.closest('.dial-item') };
   dial.setPointerCapture(e.pointerId);
 });
 dial.addEventListener('pointermove', (e) => {
   if (!drag) return;
-  const dx = e.clientX - drag.x;
-  drag.moved = Math.max(drag.moved, Math.abs(dx));
-  dialPos = Math.max(-0.4, Math.min(PANELS.length - 0.6, drag.pos - dx / PX_PER_ITEM));
+  // แนวตั้ง: ลากซ้าย = ถัดไป · แนวนอน (หน้าปัดด้านขวา): ลากขึ้น = ถัดไป
+  const delta = LANDSCAPE.matches ? e.clientY - drag.y : e.clientX - drag.x;
+  drag.moved = Math.max(drag.moved, Math.abs(delta));
+  dialPos = Math.max(-0.4, Math.min(PANELS.length - 0.6, drag.pos - delta / PX_PER_ITEM));
   renderDial();
 });
 const endDrag = () => {
@@ -245,7 +268,7 @@ $('#stage').addEventListener('touchend', (e) => {
   if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) go(current + (dx < 0 ? 1 : -1));
 }, { passive: true });
 addEventListener('keydown', (e) => {
-  if (e.target instanceof Element && e.target.closest('input, select, textarea')) return;
+  if (DESKTOP.matches || (e.target instanceof Element && e.target.closest('input, select, textarea'))) return;
   if (e.key === 'ArrowRight') go(current + 1);
   if (e.key === 'ArrowLeft') go(current - 1);
 });

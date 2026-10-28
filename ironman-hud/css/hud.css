@@ -178,11 +178,17 @@ a { color: var(--muted); }
 .flood-frame iframe { display: block; width: 100%; height: 100%; border: 0; background: #03080f; }
 .flood-full { position: absolute; top: 6px; right: 6px; z-index: 1; font-size: 11px; color: var(--text); text-decoration: none; background: rgba(2, 8, 16, 0.85); border: 1px solid rgba(var(--hud-rgb), 0.4); padding: 3px 7px; }
 
+.toast { position: fixed; left: 16px; right: 16px; top: calc(var(--safe-t) + 52px); z-index: 20; max-width: 480px; margin: 0 auto;
+  background: rgba(2, 10, 18, 0.95); border: 1px solid var(--acc); color: var(--text); padding: 10px 12px; font-size: 13px; line-height: 1.5;
+  box-shadow: 0 0 18px rgba(var(--hud-rgb), 0.25); animation: toast 7s forwards; }
+@keyframes toast { 0% { opacity: 0; transform: translateY(-8px); } 6%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+
 .foot { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 10.5px; color: var(--muted); }
 
 /* หน้าปัด: ครึ่งวงกลมด้านล่าง หมุนตามนิ้ว */
 .dial { position: fixed; left: 0; right: 0; bottom: 0; height: calc(var(--dial-h) + var(--safe-b)); overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none;
   background: linear-gradient(to top, rgba(2, 7, 13, 0.98) 55%, rgba(2, 7, 13, 0)); z-index: 10; }
+.dial-inner { position: absolute; inset: 0; }
 .dial-ring { position: absolute; left: 50%; top: 20px; width: 520px; height: 520px; margin-left: -260px; border-radius: 50%;
   border: 1px solid rgba(var(--hud-rgb), 0.5);
   background: repeating-conic-gradient(from 0deg, rgba(var(--hud-rgb), 0.55) 0 0.4deg, transparent 0.4deg 3deg);
@@ -190,26 +196,68 @@ a { color: var(--muted); }
 /* จุดหมุน = จุดศูนย์กลางวง (ขอบบนวง 20px + รัศมี 260px) ไอเท็มวางที่ขอบบนแล้วหมุนรอบจุดนี้ */
 .dial-items { position: absolute; left: 50%; top: 280px; width: 0; height: 0; }
 .dial-item { position: absolute; left: 0; top: -260px; width: 74px; margin-left: -37px; transform-origin: 37px 260px; text-align: center; background: none; border: 0; padding: 0; cursor: pointer; color: var(--muted); }
+.dial-item { transform: rotate(var(--a, 0deg)); }
+.dial-item .dl { display: block; }
 .dial-item b { display: block; font-family: var(--mono); font-weight: 400; font-size: 18px; letter-spacing: 0.06em; margin-top: 12px; }
 .dial-item small { display: block; font-size: 10px; letter-spacing: 0.04em; }
 .dial-item.on { color: #fff; }
 .dial-item.on b { color: var(--hud); font-size: 22px; text-shadow: 0 0 10px rgba(var(--hud-rgb), 0.9); }
 .dial-pointer { position: absolute; left: 50%; top: 10px; margin-left: -6px; border: 6px solid transparent; border-top: 8px solid var(--acc); filter: drop-shadow(0 0 4px var(--acc)); }
 
-/* แนวนอน (หมุนมือถือ): หน้าหลักวางวงซ้าย ข้อมูลขวา */
+/* ===== มือถือแนวนอน: หน้าปัดย้ายไปตั้งด้านขวา, ทุกแผงแบ่งซ้าย (วงกลม) / ขวา (ข้อมูล) ===== */
 @media (orientation: landscape) and (max-height: 520px) {
-  :root { --dial-h: 78px; }
-  .hud { max-width: none; }
-  #p-home.on { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); grid-template-rows: auto 1fr; column-gap: 18px; align-items: start; }
-  #p-home .greet { grid-column: 2; }
-  #p-home .reactor-wrap { grid-column: 1; grid-row: 1 / span 2; }
-  #p-home .reactor { width: min(40vw, calc(100dvh - 150px)); }
-  #p-home .gauges { grid-column: 2; }
-  .big { width: min(34vw, calc(100dvh - 160px)); }
-  .apps { width: min(60vw, calc(100dvh - 130px)); }
-  .dial-ring { top: 12px; }
-  .dial-items { top: 272px; }
-  .dial-pointer { top: 2px; }
+  :root { --dial-h: 84px; }
+  .hud { max-width: none; gap: 8px;
+    padding: calc(var(--safe-t) + 8px) calc(var(--safe-r) + var(--dial-h) + 10px) calc(var(--safe-b) + 10px) calc(var(--safe-l) + 14px); }
+  .dial { left: auto; top: 0; bottom: 0; right: 0; height: auto; width: calc(var(--dial-h) + var(--safe-r));
+    background: linear-gradient(to left, rgba(2, 7, 13, 0.98) 60%, rgba(2, 7, 13, 0)); }
+  /* หมุนกล่องหน้าปัด -90° : ขอบบน → ขอบซ้าย (โค้งหันเข้าหาเนื้อหา) */
+  .dial-inner { inset: auto; left: 0; top: 0; width: 100dvh; height: var(--dial-h); transform-origin: 0 0; transform: rotate(-90deg) translateX(-100%); }
+  .dial-item .dl { transform: rotate(calc(90deg - var(--a, 0deg))); } /* ตัวหนังสือตั้งตรงเสมอ */
+  .dial-item b { margin-top: 10px; }
+
+  .pnl.on { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); column-gap: 16px; row-gap: 8px; align-items: start; }
+  .pnl > * { grid-column: 2; }
+  .pnl > .ph { grid-column: 1 / -1; font-size: 16px; }
+  .pnl > .ph span { font-size: 22px; }
+  .pnl > .lead { grid-column: 1; grid-row: 2 / span 8; align-self: start; }
+  #p-home > .lead { grid-row: 1 / span 8; }
+  #p-home .reactor { width: min(38vw, calc(100dvh - 90px)); }
+  .big { width: min(32vw, calc(100dvh - 120px)); }
+  .apps { width: min(38vw, calc(100dvh - 90px)); margin-top: 0; }
+  #p-week.on { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  #p-week > .box { grid-column: auto; }
+  #p-week > .facts { grid-column: 1 / -1; }
+  #p-flood > * { grid-column: 1 / -1; }
+  .flood-frame { height: calc(100dvh - var(--safe-t) - var(--safe-b) - 100px); min-height: 240px; }
+  .foot { padding-right: 4px; }
+}
+
+/* ===== คอม / จอกว้าง: แสดงทุกแผงพร้อมกันแบบแดชบอร์ด ไม่ต้องใช้หน้าปัด ===== */
+@media (min-width: 1100px) and (min-height: 600px) {
+  :root { --dial-h: 0px; }
+  .dial { display: none; }
+  .hud { max-width: 1760px; padding: 18px 28px 20px; gap: 16px; }
+  .top { font-size: 13px; }
+  .stage { display: grid; gap: 18px; align-items: start;
+    grid-template-columns: minmax(360px, 410px) minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: "home rain air" "week flood flood"; }
+  .pnl, .pnl.on { display: flex; animation: none; }
+  #p-home { grid-area: home; }
+  #p-rain { grid-area: rain; }
+  #p-air { grid-area: air; }
+  #p-week { grid-area: week; }
+  #p-flood { grid-area: flood; }
+  #p-apps { display: none; } /* ทางลัดเปิดแอปใช้ได้บนมือถือเท่านั้น */
+  .reactor { width: 360px; }
+  /* แผงฝน/ฝุ่น: วงอยู่ซ้าย สรุปอยู่ขวา */
+  #p-rain, #p-air { display: grid; grid-template-columns: 190px minmax(0, 1fr); column-gap: 16px; row-gap: 12px; align-items: center; }
+  #p-rain > *, #p-air > * { grid-column: 1 / -1; }
+  #p-rain > .big, #p-air > .big { grid-column: 1; width: 190px; margin: 0; }
+  #p-rain > .summary, #p-air > .summary { grid-column: 2; grid-row: 2; text-align: left; }
+  .flood-frame { height: max(560px, calc(100vh - 470px)); }
+  #p-flood .hint { display: none; }
+  .greet-en { font-size: 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

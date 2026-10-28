@@ -1,7 +1,7 @@
 // Service worker: จำหน้าแอปไว้ในเครื่อง เปิดได้แม้ไม่มีเน็ต (ทำงานเฉพาะบน https)
 // ไฟล์ของแอปใช้แบบ "เปิดจากที่จำไว้ก่อน แล้วแอบโหลดของใหม่มาเก็บ" → แก้เว็บแล้ว เปิดครั้งถัดไปจะได้เวอร์ชันใหม่
 // ข้อมูลอากาศไม่ผ่านตรงนี้ (แอปจำค่าล่าสุดไว้เองใน localStorage)
-const CACHE = 'jarvis-v1';
+const CACHE = 'jarvis-v2';
 const SHELL = ['./', 'index.html', 'css/hud.css', 'js/hud.js', 'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {

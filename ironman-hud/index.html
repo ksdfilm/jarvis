@@ -40,7 +40,7 @@
           <button type="button" id="name-btn" class="greet-en">GOOD EVENING, <b id="name">SIR</b></button>
           <div class="greet-th" id="greet-th">สวัสดีตอนเย็น</div>
         </div>
-        <div class="reactor-wrap">
+        <div class="reactor-wrap lead">
           <button type="button" class="reactor" id="reactor" aria-label="เปลี่ยนธีมสี">
             <svg viewBox="0 0 320 320" id="reactor-svg" aria-hidden="true"></svg>
             <div class="core">
@@ -61,7 +61,7 @@
       <!-- 02 โอกาสฝน -->
       <section class="pnl" id="p-rain" aria-label="โอกาสฝน">
         <h2 class="ph"><span>02</span>RAIN <small>โอกาสฝนตก</small></h2>
-        <div class="big">
+        <div class="big lead">
           <svg viewBox="0 0 200 200" class="ring" id="rain-ring" aria-hidden="true"></svg>
           <div class="big-core"><b id="rain-big">--</b><small>%</small><span>โอกาสฝนชั่วโมงนี้</span></div>
         </div>
@@ -80,7 +80,7 @@
       <!-- 03 ฝุ่น PM2.5 -->
       <section class="pnl" id="p-air" aria-label="ฝุ่น PM2.5">
         <h2 class="ph"><span>03</span>AIR <small>ฝุ่น PM2.5</small></h2>
-        <div class="big aq">
+        <div class="big aq lead">
           <svg viewBox="0 0 200 200" class="ring" id="air-ring" aria-hidden="true"></svg>
           <div class="big-core"><b id="pm-big">--</b><small>µg/m³</small><span id="aqi-big">AQI --</span></div>
         </div>
@@ -126,7 +126,7 @@
       <!-- 05 ทางลัดแอป -->
       <section class="pnl" id="p-apps" aria-label="ทางลัดเปิดแอป">
         <h2 class="ph"><span>05</span>APPS <small>ทางลัดเปิดแอป</small></h2>
-        <div class="apps" id="apps">
+        <div class="apps lead" id="apps">
           <div class="apps-core"><span id="apps-time">--:--</span><small>แตะไอคอนเพื่อเปิดแอป</small></div>
         </div>
         <div class="apps-tools">
@@ -155,9 +155,12 @@
 
   <!-- หน้าปัดหมุนเปลี่ยนแผง (ลากซ้าย-ขวา หรือแตะหมายเลข) -->
   <nav class="dial" id="dial" aria-label="เปลี่ยนแผง">
-    <div class="dial-ring" id="dial-ring" aria-hidden="true"></div>
-    <div class="dial-items" id="dial-items"></div>
-    <div class="dial-pointer" aria-hidden="true"></div>
+    <!-- แนวตั้ง: ครึ่งวงกลมด้านล่าง · แนวนอน: หมุนไปตั้งด้านขวา -->
+    <div class="dial-inner">
+      <div class="dial-ring" id="dial-ring" aria-hidden="true"></div>
+      <div class="dial-items" id="dial-items"></div>
+      <div class="dial-pointer" aria-hidden="true"></div>
+    </div>
   </nav>
 
   <script type="module" src="js/hud.js"></script>
