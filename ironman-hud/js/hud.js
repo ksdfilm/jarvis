@@ -1,4 +1,16 @@
-// EDIT HUD: แผง 01–05 สลับด้วยหน้าปัดหมุน · อากาศ/ฝน/ฝุ่นจริงจาก Open-Meteo (ฟรี ไม่ต้องใช้คีย์) · ทางลัดเปิดแอป
+// EDIT HUD: แผงต่างๆ สลับด้วยหน้าปัดหมุน · อากาศ/ฝน/ฝุ่นจริงจาก Open-Meteo (ฟรี ไม่ต้องใช้คีย์) · ทางลัดเปิดแอป
+// ระบบเสริม (js/sys) และแผงใหม่ (js/panels) แยกไฟล์ แต่ละไฟล์รับ ctx จากไฟล์นี้ตอน init
+import { applyTheme, nextTheme } from './sys/themes.js';
+import fx, { play as sfx } from './sys/fx.js';
+import menu from './sys/menu.js';
+import settings from './sys/settings.js';
+import boot from './sys/boot.js';
+import lock from './sys/lock.js';
+import standby from './sys/standby.js';
+import report from './sys/report.js';
+import weatherx from './sys/weatherx.js';
+import PANEL_MODS from './panels/index.js';
+
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 const NS = 'http://www.w3.org/2000/svg';
@@ -23,19 +35,20 @@ const CITIES = [
 
 // ---------- ธีม / ชื่อ / เมือง ----------
 const body = document.body;
-body.dataset.theme = store.get('theme', 'jarvis');
-$('#reactor').addEventListener('click', () => {
-  body.dataset.theme = body.dataset.theme === 'jarvis' ? 'mark' : 'jarvis';
-  store.set('theme', body.dataset.theme);
+function setTheme(key) {
+  store.set('theme', applyTheme(key));
   renderWeather();
-});
+}
+applyTheme(store.get('theme', 'jarvis'));
+$('#reactor').addEventListener('click', () => setTheme(nextTheme(body.dataset.theme))); // แตะวงกลาง = วนธีมถัดไป
 
 let userName = store.get('name', 'SIR');
 $('#name').textContent = userName;
-$('#name-btn').addEventListener('click', () => {
+function editName() {
   const v = prompt('ให้ EDIT เรียกคุณว่าอะไร?', userName);
   if (v && v.trim()) { userName = v.trim().slice(0, 18).toUpperCase(); $('#name').textContent = userName; store.set('name', userName); }
-});
+}
+$('#name-btn').addEventListener('click', editName);
 
 // GPS ใช้ได้เฉพาะเปิดผ่าน https (เช่นบน GitHub Pages) — เปิดผ่าน http ในวง LAN จะไม่มีตัวเลือกนี้
 const CAN_GPS = window.isSecureContext && 'geolocation' in navigator;
@@ -171,6 +184,18 @@ const PANELS = [
   { id: 'p-flood', en: 'FLOOD', th: 'น้ำท่วม' },
 ];
 const FLOOD_IDX = 5;
+// แผงจากโมดูล (js/panels) ต่อท้าย: สร้าง <section> ให้อัตโนมัติ เลขแผงนับต่อจากแผงหลัก
+for (const m of PANEL_MODS) {
+  const n = PANELS.length + 1;
+  const sec = document.createElement('section');
+  sec.className = 'pnl mod';
+  sec.id = m.id;
+  sec.setAttribute('aria-label', m.th);
+  if (m.span) sec.style.setProperty('--span', m.span);
+  sec.innerHTML = `<h2 class="ph"><span>${String(n).padStart(2, '0')}</span>${m.en} <small>${m.sub || m.th}</small></h2>${m.html || ''}`;
+  $('#stage').append(sec);
+  PANELS.push({ id: m.id, en: m.en, th: m.th, mod: m });
+}
 const STEP = 22;           // องศาระหว่างหมายเลขบนหน้าปัด
 const PX_PER_ITEM = 260 * STEP * Math.PI / 180; // ลากนิ้วเท่านี้ = เลื่อน 1 ช่อง
 let current = 0, dialPos = 0, tween = null;
@@ -212,6 +237,7 @@ function go(i) {
     return;
   }
   const back = i < current;
+  const prev = current;
   current = i;
   PANELS.forEach((p, k) => {
     const el = document.getElementById(p.id);
@@ -222,6 +248,8 @@ function go(i) {
   window.scrollTo({ top: 0 });
   if (i === 3) drawHourly(); // ต้องวัดขนาดตอนแผงแสดงอยู่
   syncFlood(i === FLOOD_IDX);
+  if (prev !== i) { sfx('panel'); PANELS[prev]?.mod?.hide?.(); }
+  PANELS[i].mod?.show?.();
 }
 
 // แผนที่น้ำท่วม: โหลดครั้งแรกเมื่อเปิดแผง (ประหยัดเน็ต/แบต) และสั่งให้หยุดเมื่อออกจากแผง
@@ -239,14 +267,16 @@ let drag = null;
 dial.addEventListener('pointerdown', (e) => {
   cancelAnimationFrame(tween);
   drag = { x: e.clientX, y: e.clientY, pos: dialPos, moved: 0, target: e.target.closest('.dial-item') };
-  dial.setPointerCapture(e.pointerId);
+  try { dial.setPointerCapture(e.pointerId); } catch { /* ไม่มี pointer จริง */ }
 });
 dial.addEventListener('pointermove', (e) => {
   if (!drag) return;
   // แนวตั้ง: ลากซ้าย = ถัดไป · แนวนอน (หน้าปัดด้านขวา): ลากขึ้น = ถัดไป
   const delta = LANDSCAPE.matches ? e.clientY - drag.y : e.clientX - drag.x;
   drag.moved = Math.max(drag.moved, Math.abs(delta));
+  const before = Math.round(dialPos);
   dialPos = Math.max(-0.4, Math.min(PANELS.length - 0.6, drag.pos - delta / PX_PER_ITEM));
+  if (Math.round(dialPos) !== before) sfx('tick'); // เสียงคลิกทุกช่องที่หมุนผ่าน
   renderDial();
 });
 const endDrag = () => {
@@ -260,7 +290,11 @@ dial.addEventListener('pointercancel', endDrag);
 
 // ปัดซ้าย-ขวาบนเนื้อหาเพื่อเปลี่ยนแผง
 let sw = null;
-$('#stage').addEventListener('touchstart', (e) => { const t = e.touches[0]; sw = { x: t.clientX, y: t.clientY }; }, { passive: true });
+$('#stage').addEventListener('touchstart', (e) => {
+  // ลากบนลูกโลก/แผนที่/เครื่องมือ = ใช้งานสิ่งนั้น ไม่ใช่เปลี่ยนแผง
+  if (e.target.closest('.no-swipe, .maplibregl-map, input[type=range]')) { sw = null; return; }
+  const t = e.touches[0]; sw = { x: t.clientX, y: t.clientY };
+}, { passive: true });
 $('#stage').addEventListener('touchend', (e) => {
   if (!sw) return;
   const t = e.changedTouches[0], dx = t.clientX - sw.x, dy = t.clientY - sw.y;
@@ -377,6 +411,7 @@ async function loadWeather() {
 function renderWeather() {
   if (!wx || String(wx.city) !== citySel.value) { $('#updated').textContent = 'ยังไม่มีข้อมูลอากาศ (ต้องต่ออินเทอร์เน็ต)'; return; }
   renderHome(); renderRain(); renderAir(); renderWeek(); drawHourly();
+  dispatchEvent(new CustomEvent('hud:wx')); // ให้โมดูลเสริมอัปเดตตาม
   const ago = Math.round((Date.now() - wx.at) / 60000);
   $('#updated').textContent = `${wx.place || CITIES[+wx.city]?.[0] || ''} · อัปเดต ${new Date(wx.at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}${ago > 30 ? ` (${ago} นาทีที่แล้ว)` : ''}`;
 }
@@ -567,14 +602,263 @@ $('#apps-edit').addEventListener('click', (e) => {
 });
 $('#apps-reset').addEventListener('click', () => { if (confirm('คืนทางลัดเป็นค่าเริ่มต้น?')) { apps = DEFAULT_APPS.map((a) => ({ ...a })); save(); } });
 
+// ---------- EDIT พูด + สั่งด้วยเสียง ----------
+// ใช้เสียงพูด/ฟังที่มากับเครื่องเอง (Web Speech API) ฟรี ไม่ใช้ AI เสียเงิน
+// การฟังเสียงบางอุปกรณ์ไม่รองรับ (เช่นเปิดจากไอคอนหน้าจอโฮมบน iPhone บางรุ่น) → ยังแตะคำสั่งสำเร็จรูปได้
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const synth = window.speechSynthesis;
+let thVoice = null;
+function pickVoice() {
+  const vs = synth?.getVoices() || [];
+  thVoice = vs.find((v) => /^th/i.test(v.lang) && /kanya|premwadee|narisa/i.test(v.name)) || vs.find((v) => /^th/i.test(v.lang)) || null;
+}
+if (synth) { pickVoice(); synth.addEventListener?.('voiceschanged', pickVoice); }
+
+const vBox = $('#voice');
+const QUICK = ['รายงานวันนี้', 'ฝนจะตกไหม', 'ฝุ่นเท่าไหร่', 'อากาศตอนนี้', 'พรุ่งนี้อากาศเป็นยังไง', 'กี่โมงแล้ว', 'เปิดแผนที่น้ำท่วม', 'เปลี่ยนสี'];
+function renderChips() { $('#v-chips').innerHTML = QUICK.map((q) => `<button type="button">${q}</button>`).join(''); }
+renderChips();
+$('#v-chips').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) handleCommand(b.textContent); });
+
+// คำสั่งเสียงที่โมดูลอื่นเพิ่มเข้ามา (ตรวจก่อนคำสั่งหลัก): { re, fn(q, raw) → {text, go?} | null }
+const INTENTS = [];
+function addIntent(re, fn, chip) { INTENTS.push({ re, fn }); if (chip && !QUICK.includes(chip)) { QUICK.push(chip); renderChips(); } }
+
+function say(text) {
+  $('#v-reply').textContent = text;
+  speak(text);
+}
+/** พูดอย่างเดียว (ไม่เปิดหน้าต่าง) */
+function speak(text) {
+  if (!synth) return;
+  synth.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'th-TH';
+  if (thVoice) u.voice = thVoice;
+  u.onstart = () => vBox.classList.add('speaking');
+  u.onend = u.onerror = () => vBox.classList.remove('speaking');
+  synth.speak(u);
+}
+const APP_ALIASES = {
+  'ไลน์': 'line', 'ยูทูบ': 'youtube', 'ยูทูป': 'youtube', 'เฟซบุ๊ก': 'facebook', 'เฟสบุ๊ค': 'facebook', 'เฟซบุ๊ค': 'facebook', 'เฟส': 'facebook',
+  'กูเกิล': 'google', 'กูเกิ้ล': 'google', 'ชอร์ตคัท': 'shortcuts', 'คีย์ลัด': 'shortcuts', 'โน๊ต': 'โน้ต', 'รูป': 'รูปภาพ', 'แมพ': 'แผนที่', 'แมป': 'แผนที่', 'เอสเอ็มเอส': 'ข้อความ',
+};
+const nameTh = () => (userName && userName !== 'SIR' ? `คุณ${userName.toLowerCase()}` : 'คุณ');
+const hourTh = (iso) => `${+iso.slice(11, 13)} นาฬิกา`;
+
+/** แปลคำพูด → คำตอบ (และสั่งเปลี่ยนแผง/เปิดแอปถ้าเกี่ยวข้อง) */
+function answer(raw) {
+  const q = raw.toLowerCase().replace(/\s+/g, '');
+  const has = (re) => re.test(q);
+  const noWx = 'ยังไม่มีข้อมูลอากาศค่ะ ลองต่ออินเทอร์เน็ตแล้วถามใหม่นะคะ';
+  const now = new Date();
+
+  for (const it of INTENTS) {
+    if (it.re.test(q)) { const r = it.fn(q, raw); if (r) return r; }
+  }
+  const open = q.match(/^เปิด(?:แอป)?(.+)/);
+  if (open && !has(/น้ำท่วม/)) {
+    // ระบบฟังเสียงมักได้คำไทย (ไลน์ ยูทูบ) → แปลงเป็นชื่อทางลัดก่อนค้น
+    const target = Object.entries(APP_ALIASES).reduce((t, [th, en]) => t.replace(th, en), open[1]);
+    const app = apps.find((a) => target.includes(a.name.toLowerCase().replace(/\s+/g, '')) || a.name.toLowerCase().includes(target));
+    if (app) return { text: `แตะปุ่มด้านล่างเพื่อเปิด ${app.name} ค่ะ`, app };
+    return { text: `ยังไม่มีทางลัดชื่อ ${open[1]} ค่ะ เพิ่มได้ที่แผงแอปนะคะ`, go: 4 };
+  }
+  if (has(/กี่โมง|เวลา|โมงแล้ว|time/)) return { text: `ตอนนี้เวลา ${now.getHours()} นาฬิกา ${now.getMinutes()} นาทีค่ะ` };
+  if (has(/วันที่|วันอะไร|วันนี้วัน/)) return { text: `วันนี้${thDate.format(now)}ค่ะ` };
+  if (has(/น้ำท่วม|flood/)) return { text: 'เปิดแผนที่เฝ้าระวังน้ำท่วมกรุงเทพให้แล้วค่ะ ฝนเป็นข้อมูลจริง ส่วนระดับน้ำเป็นค่าประมาณการนะคะ', go: 5 };
+  if (has(/แอป|ทางลัด|app/)) return { text: 'นี่คือทางลัดแอปของคุณค่ะ', go: 4 };
+  if (has(/หน้าหลัก|กลับ|home/)) return { text: 'กลับหน้าหลักแล้วค่ะ', go: 0 };
+  if (has(/เปลี่ยนสี|ธีม|theme/)) { $('#reactor').click(); return { text: `เปลี่ยนเป็นธีม ${body.dataset.theme} แล้วค่ะ` }; }
+  if (has(/ฝุ่น|pm|พีเอ็ม|มลพิษ|หน้ากาก|คุณภาพอากาศ/)) {
+    if (!wx?.a) return { text: noWx };
+    const pm = wx.a.current.pm2_5, lv = pmLevel(pm);
+    return { text: `ฝุ่น พีเอ็มสองจุดห้า ตอนนี้ ${Math.round(pm)} ไมโครกรัมต่อลูกบาศก์เมตร อยู่ในระดับ${lv.name}ค่ะ ${lv.advice}`, go: 2 };
+  }
+  if (has(/พรุ่งนี้/)) {
+    if (!wx) return { text: noWx };
+    const d = wx.f.daily;
+    return { text: `พรุ่งนี้${wmo(d.weather_code[1], 1)[0]} อุณหภูมิ ${Math.round(d.temperature_2m_min[1])} ถึง ${Math.round(d.temperature_2m_max[1])} องศา โอกาสฝน ${d.precipitation_probability_max[1] ?? 0} เปอร์เซ็นต์ค่ะ`, go: 3 };
+  }
+  if (has(/พยากรณ์|สัปดาห์|อาทิตย์นี้|7วัน|เจ็ดวัน/)) {
+    if (!wx) return { text: noWx };
+    const d = wx.f.daily, rainy = d.precipitation_probability_max.filter((p) => p >= 60).length;
+    return { text: `เจ็ดวันข้างหน้า อุณหภูมิสูงสุดราว ${Math.round(Math.max(...d.temperature_2m_max))} องศา มีโอกาสฝนตกสูง ${rainy} วัน จากเจ็ดวันค่ะ`, go: 3 };
+  }
+  if (has(/ฝน|ร่ม|rain/)) {
+    if (!wx) return { text: noWx };
+    const h = wx.f.hourly, probs = h.precipitation_probability.slice(0, 24), times = h.time.slice(0, 24);
+    const s = probs.findIndex((p) => p >= 60), max = Math.max(...probs);
+    let t = `ตอนนี้โอกาสฝน ${probs[0] ?? 0} เปอร์เซ็นต์ค่ะ`;
+    if (s >= 0) {
+      let e = s; while (e + 1 < probs.length && probs[e + 1] >= 60) e++;
+      t += ` ช่วงเสี่ยงฝนตกคือ${s === 0 ? 'ตอนนี้' : ` ${hourTh(times[s])}`} ถึง ${(+times[e].slice(11, 13) + 1) % 24} นาฬิกา โอกาสสูงสุด ${max} เปอร์เซ็นต์${s <= 3 ? ' ออกไปข้างนอกพกร่มด้วยนะคะ' : ''}`;
+    } else if (max >= 40) t += ` อาจมีฝนช่วง ${hourTh(times[probs.indexOf(max)])} ค่ะ`;
+    else t += ' ยี่สิบสี่ชั่วโมงข้างหน้าฝนไม่น่าตก ไม่ต้องพกร่มค่ะ';
+    return { text: t, go: 1 };
+  }
+  if (has(/อากาศ|อุณหภูมิ|ร้อน|หนาว|องศา|weather/)) {
+    if (!wx) return { text: noWx };
+    const c = wx.f.current;
+    return { text: `ตอนนี้${wmo(c.weather_code, c.is_day)[0]} อุณหภูมิ ${Math.round(c.temperature_2m)} องศา รู้สึกเหมือน ${Math.round(c.apparent_temperature)} องศา ความชื้น ${Math.round(c.relative_humidity_2m)} เปอร์เซ็นต์ค่ะ`, go: 0 };
+  }
+  if (has(/สวัสดี|หวัดดี|edit|เอดิท|อีดิท|hello|hi/)) return { text: `สวัสดีค่ะ${nameTh()} มีอะไรให้ EDIT ช่วยไหมคะ` };
+  if (has(/ขอบคุณ|thank/)) return { text: 'ยินดีค่ะ' };
+  if (has(/ช่วย|ทำอะไรได้|help/)) return { text: 'ถามได้เลยค่ะ เช่น ฝนจะตกไหม ฝุ่นเท่าไหร่ อากาศตอนนี้ พรุ่งนี้อากาศเป็นยังไง กี่โมงแล้ว เปิดแผนที่น้ำท่วม หรือ เปิดไลน์' };
+  return { text: 'ขอโทษค่ะ ยังไม่เข้าใจคำสั่ง ลองพูดว่า ฝนจะตกไหม ฝุ่นเท่าไหร่ หรือ พรุ่งนี้อากาศเป็นยังไง นะคะ' };
+}
+
+function handleCommand(text) {
+  if (vBox.classList.contains('listening')) { try { rec?.abort(); } catch { /* ไม่เป็นไร */ } }
+  $('#v-status').textContent = 'EDIT';
+  $('#v-heard').textContent = text;
+  const r = answer(text);
+  say(r.text);
+  const act = $('#v-action');
+  act.innerHTML = '';
+  if (r.app && SAFE_URL.test(r.app.url)) {
+    // เปิดแอปต้องมาจากการแตะของผู้ใช้ (iPhone ไม่ยอมให้เว็บเปิดแอปเองหลังฟังเสียง)
+    const a = document.createElement('a');
+    a.href = r.app.url;
+    if (/^https?:/i.test(r.app.url)) { a.target = '_blank'; a.rel = 'noopener'; }
+    a.textContent = `เปิด ${r.app.name} →`;
+    act.append(a);
+  }
+  if (r.go !== undefined) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = `ไปที่แผง ${pad(r.go + 1)} ${PANELS[r.go].th} →`;
+    b.addEventListener('click', () => { closeVoice(); go(r.go); });
+    act.append(b);
+  }
+}
+
+let rec = null;
+function listen() {
+  vBox.classList.remove('speaking');
+  $('#v-heard').textContent = '';
+  if (!SR) {
+    $('#v-status').textContent = 'แตะคำสั่งด้านล่าง';
+    $('#v-reply').textContent = 'อุปกรณ์นี้ยังฟังเสียงไม่ได้ (เช่นเปิดจากไอคอนหน้าจอโฮม) ลองเปิดผ่าน Safari หรือแตะคำสั่งด้านล่างแทนได้ค่ะ';
+    $('#v-again').hidden = true;
+    return;
+  }
+  try { rec?.abort(); } catch { /* ไม่เป็นไร */ }
+  rec = new SR();
+  rec.lang = 'th-TH';
+  rec.interimResults = true;
+  rec.maxAlternatives = 1;
+  let final = '';
+  rec.onstart = () => { vBox.classList.add('listening'); $('#mic').classList.add('on'); $('#v-status').textContent = 'กำลังฟัง… พูดได้เลย'; };
+  rec.onresult = (e) => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript; else interim += e.results[i][0].transcript;
+    }
+    $('#v-heard').textContent = final || interim;
+  };
+  rec.onerror = (e) => {
+    $('#v-status').textContent = 'ฟังไม่สำเร็จ';
+    $('#v-reply').textContent = e.error === 'not-allowed' || e.error === 'service-not-allowed'
+      ? 'ยังไม่ได้อนุญาตให้ใช้ไมโครโฟนค่ะ เปิดได้ที่ ตั้งค่า → Safari → ไมโครโฟน'
+      : e.error === 'no-speech' ? 'ไม่ได้ยินเสียงค่ะ แตะ "พูดอีกครั้ง" แล้วลองใหม่นะคะ' : 'ฟังไม่ชัดค่ะ ลองใหม่อีกครั้งนะคะ';
+  };
+  rec.onend = () => {
+    vBox.classList.remove('listening'); $('#mic').classList.remove('on');
+    if (final.trim()) { $('#v-status').textContent = 'EDIT'; handleCommand(final.trim()); }
+    else if ($('#v-status').textContent.startsWith('กำลังฟัง')) $('#v-status').textContent = 'แตะ "พูดอีกครั้ง" หรือเลือกคำสั่งด้านล่าง';
+  };
+  rec.start();
+}
+function openVoice() {
+  // iPhone ต้องเริ่มเสียงพูดจากการแตะของผู้ใช้ก่อน ไม่งั้นพูดทีหลังไม่ออก
+  if (synth) { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; synth.speak(u); }
+  vBox.hidden = false;
+  $('#v-reply').textContent = '';
+  $('#v-action').innerHTML = '';
+  $('#v-again').hidden = !SR;
+  listen();
+}
+/** เปิดหน้าต่าง EDIT พร้อมข้อความ (ไม่ฟังเสียง) เช่นรายงานประจำวัน */
+function showVoice(text, { title = 'EDIT', list = null } = {}) {
+  try { rec?.abort(); } catch { /* ไม่เป็นไร */ }
+  vBox.hidden = false;
+  vBox.classList.remove('listening');
+  $('#v-status').textContent = title;
+  $('#v-heard').textContent = '';
+  $('#v-action').innerHTML = list ? `<ul class="v-list">${list.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : '';
+  $('#v-reply').textContent = list ? '' : text;
+  speak(text);
+}
+function closeVoice() {
+  try { rec?.abort(); } catch { /* ไม่เป็นไร */ }
+  synth?.cancel();
+  vBox.hidden = true;
+  vBox.classList.remove('listening', 'speaking');
+  $('#mic').classList.remove('on');
+}
+$('#mic').addEventListener('click', openVoice);
+$('#v-again').addEventListener('click', listen);
+$('#v-close').addEventListener('click', closeVoice);
+addEventListener('keydown', (e) => { if (e.key === 'Escape' && !vBox.hidden) closeVoice(); });
+
+// ---------- ctx: ของที่ส่งให้ระบบเสริมและแผงใหม่ใช้ ----------
+const greetTh = () => greet(new Date().getHours())[1];
+const REPORTERS = [() => {
+  if (!wx) return 'ยังไม่มีข้อมูลอากาศ';
+  return ['อากาศตอนนี้', 'ฝนจะตกไหม', 'ฝุ่นเท่าไหร่'].map((q) => answer(q).text); // คืนเป็นหลายข้อได้
+}];
+const ctx = {
+  $, $$, esc, pad, mk, polar, arc, store, toast, icon, wmo, pmLevel, thDate, reduceMotion, DESKTOP, LANDSCAPE,
+  fx: { play: sfx },
+  panels: PANELS,
+  current: () => current,
+  go,
+  addIntent,
+  reporters: REPORTERS,
+  addReporter: (fn) => REPORTERS.push(fn),
+  speak,
+  voice: { show: showVoice, close: closeVoice },
+  setTheme,
+  userName: () => userName,
+  editName,
+  nameTh,
+  greetTh,
+  wx: () => wx,
+  /** ตำแหน่งปัจจุบันที่ใช้ดึงอากาศ { name, lat, lon } */
+  place: () => (wx?.f ? { name: wx.place, lat: wx.f.latitude, lon: wx.f.longitude } : { name: CITIES[0][0], lat: CITIES[0][1], lon: CITIES[0][2] }),
+  /** ข้อมูลย่อสำหรับโหมดตั้งโต๊ะ */
+  summary: () => {
+    if (!wx) return [];
+    const c = wx.f.current, out = [['อุณหภูมิ', `${Math.round(c.temperature_2m)}°C ${wmo(c.weather_code, c.is_day)[0]}`], ['โอกาสฝน', `${wx.f.hourly.precipitation_probability[0] ?? 0}%`]];
+    if (wx.a) out.push(['PM2.5', `${Math.round(wx.a.current.pm2_5)} · ${pmLevel(wx.a.current.pm2_5).name}`]);
+    return out;
+  },
+  sys: { boot, lock, standby, settings, report },
+};
+
 // ---------- เริ่มทำงาน ----------
 $('#moon').textContent = moonPhase(Date.now());
 renderApps();
+for (const m of [fx, menu, settings, standby, report, lock, boot, weatherx]) m.init(ctx);
+for (const m of PANEL_MODS) { try { m.init?.(ctx); } catch (e) { console.error(m.id, e); } }
 go(0);
 renderDial();
 requestAnimationFrame(frame);
 renderWeather();
 loadWeather();
+// คอม: ทุกแผงแสดงพร้อมกัน → เริ่ม/หยุดแผงหนักๆ (ลูกโลก กล้อง) ตามที่อยู่ในจอ
+if ('IntersectionObserver' in window) {
+  const io = new IntersectionObserver((ents) => ents.forEach((en) => {
+    if (!DESKTOP.matches) return;
+    const p = PANELS.find((x) => x.id === en.target.id);
+    if (en.isIntersecting) p?.mod?.show?.(); else p?.mod?.hide?.();
+  }), { threshold: 0.15 });
+  PANELS.filter((p) => p.mod).forEach((p) => io.observe(document.getElementById(p.id)));
+}
+// ล็อก → ฉากบูต (ฉากบูตซ้อนอยู่บนหน้าล็อก)
+lock.check();
+boot.run();
 setInterval(loadWeather, 15 * 60 * 1000);
 // เปิดได้แม้ไม่มีเน็ต (เฉพาะ https เช่นบน GitHub Pages)
 if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});

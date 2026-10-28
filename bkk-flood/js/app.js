@@ -76,6 +76,107 @@ function pushLog(text, lvl) {
   sim.log.length = Math.min(sim.log.length, 30);
 }
 
+// ---------- โหมดฝนจริง (Open-Meteo ฟรี ไม่ต้องใช้คีย์) ----------
+// ฝน = ค่าจริงรายชั่วโมงของแต่ละย่าน · ระดับน้ำ = "ประมาณการ" ด้วยสูตรเดียวกับโหมดจำลอง
+// โดยไล่คำนวณจากฝน 12 ชม. ที่ผ่านมาจนถึงตอนนี้ (กทม. ไม่มีข้อมูลระดับน้ำเปิดให้ดึงฟรี)
+let mode = 'live';
+try { mode = localStorage.getItem('flood:mode') || 'live'; } catch { /* ใช้ค่าเริ่มต้น */ }
+const live = { data: null, error: false };
+
+/** ระดับน้ำเปลี่ยนไปทีละนาที — สูตรเดียวกับ tick() ของโหมดจำลอง */
+function stepLevel(s, level, rain, minutes) {
+  for (let m = 0; m < minutes; m++) level = Math.max(0, Math.min(60, level + rain * s.sens * 0.02 - s.drain * (1 + level / 50)));
+  return level;
+}
+/** ระดับน้ำประมาณการของจุดที่ i ณ เวลา t (ค่าฝนรายชั่วโมง = ปริมาณฝนในชั่วโมงที่สิ้นสุด ณ เวลานั้น) */
+function liveLevelAt(i, s, t) {
+  const d = live.data?.[i];
+  if (!d) return 0;
+  let level = 0;
+  for (let h = 0; h < d.t.length; h++) {
+    const start = d.t[h] - 3600000;
+    if (start >= t) break;
+    level = stepLevel(s, level, d.p[h] || 0, Math.min(60, Math.round((t - start) / 60000)));
+  }
+  return level;
+}
+function liveRainAt(i, t) {
+  const d = live.data?.[i];
+  if (!d) return 0;
+  const h = d.t.findIndex((end) => end > t);
+  return h < 0 ? 0 : d.p[h] || 0;
+}
+
+async function fetchLive() {
+  const lat = STATIONS.map((s) => s.lat).join(','), lng = STATIONS.map((s) => s.lng).join(',');
+  try {
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&hourly=precipitation&past_hours=12&forecast_hours=6&timezone=Asia%2FBangkok`);
+    const arr = await res.json();
+    if (!Array.isArray(arr)) throw new Error(arr.reason || 'no data');
+    live.data = arr.map((x) => ({ t: x.hourly.time.map((s) => new Date(`${s}:00+07:00`).getTime()), p: x.hourly.precipitation }));
+    live.error = false;
+    liveTick(true);
+    const wet = state.filter((s) => s.rain >= 0.5).sort((a, b) => b.rain - a.rain);
+    pushLog(wet.length ? `ฝนจริงตอนนี้ ${wet.length} ย่าน · หนักสุด ${wet[0].name} ${wet[0].rain.toFixed(1)} มม./ชม.` : 'ฝนจริงตอนนี้: ไม่มีฝนในพื้นที่เฝ้าระวัง', wet.length ? 1 : 0);
+  } catch {
+    live.error = true;
+    pushLog('ดึงข้อมูลฝนจริงไม่สำเร็จ (ไม่มีเน็ต?) จะลองใหม่อัตโนมัติ', 1);
+  }
+}
+
+let lastLiveMin = -1;
+function liveTick(force = false) {
+  const now = Date.now();
+  sim.time = new Date(now);
+  const minute = Math.floor(now / 60000);
+  if (!force && minute === lastLiveMin) return; // คำนวณใหม่นาทีละครั้งพอ
+  lastLiveMin = minute;
+  state.forEach((s, i) => {
+    const level = liveLevelAt(i, s, now);
+    s.trendPerHr = level - liveLevelAt(i, s, now - 3600000);
+    s.level = level;
+    s.rain = liveRainAt(i, now);
+    const lvl = levelOf(level);
+    if (lvl !== s.lvl) {
+      const up = lvl > s.lvl;
+      if (!force && (up || lvl <= 1)) pushLog(`${s.name} ${Math.round(level)} ซม. ${up ? '▲' : '▼'} ${LEVELS[lvl].name}`, lvl);
+      s.lvl = lvl;
+    }
+  });
+  const avg = state.reduce((a, s) => a + s.level, 0) / state.length;
+  sim.history.push({ avg, max: Math.max(...state.map((s) => s.level)) });
+  if (sim.history.length > 90) sim.history.shift();
+}
+
+function setMode(m) {
+  mode = m;
+  try { localStorage.setItem('flood:mode', m); } catch { /* ไม่เป็นไร */ }
+  sim.history = [];
+  if (m === 'live') {
+    state.forEach((s) => { s.level = 0; s.rain = 0; s.lvl = 0; });
+    sim.paused = false;
+    pushLog('โหมดฝนจริง: ดึงฝนรายชั่วโมง 18 ย่านจาก Open-Meteo', 0);
+    fetchLive();
+  } else {
+    sim.time = new Date(); sim.time.setSeconds(0, 0);
+    state.forEach((s) => { s.level = preset[s.id] ?? Math.random() * 3; s.lvl = levelOf(s.level); });
+    sim.storms = [spawnStorm(true), spawnStorm()];
+    pushLog('โหมดจำลอง: กลุ่มฝนและระดับน้ำสุ่มขึ้นเพื่อสาธิต', 0);
+  }
+  syncModeUI();
+}
+function syncModeUI() {
+  const isLive = mode === 'live';
+  $('#time-lbl').textContent = isLive ? 'LIVE · เวลาจริง' : 'SIM TIME';
+  $('#sim-tag').textContent = isLive ? 'ฝนจริง · ระดับน้ำประมาณการ' : 'ข้อมูลจำลอง';
+  $('#d-note').textContent = isLive
+    ? 'ตำแหน่งโดยประมาณ · ฝนจริงจาก Open-Meteo · ระดับน้ำเป็นค่าประมาณการ ไม่ใช่ค่าวัดจริง'
+    : 'ตำแหน่งโดยประมาณ · ค่าทั้งหมดเป็นการจำลอง';
+  $('#btn-mode').textContent = isLive ? '📡 ฝนจริง' : '🎲 จำลอง';
+  $('#btn-mode').classList.toggle('on', isLive);
+  $('#btn-pause').hidden = isLive;
+}
+
 function tick() {
   if (sim.paused) return;
   sim.time = new Date(sim.time.getTime() + SIM_MIN_PER_TICK * 60000);
@@ -144,6 +245,8 @@ function floodData() {
   })));
 }
 function stormData() {
+  // โหมดฝนจริง: วาดวงฝนรอบย่านที่ฝนตกจริง ขนาดตามความแรง
+  if (mode === 'live') return fc(state.filter((s) => s.rain >= 0.3).map((s) => poly(circle([s.lng, s.lat], 1000 + Math.min(s.rain, 40) * 220, 48), { peak: s.rain })));
   return fc(sim.storms.map((st) => poly(circle(st.pos, st.radiusKm * 1000 * 1.1, 64), { peak: st.peak })));
 }
 const RADAR_KM = [5, 10, 15, 20];
@@ -304,7 +407,7 @@ function renderDetail() {
   card.querySelector('.d-status').textContent = `${l.name} · ${l.en}`;
   card.querySelector('.d-level').textContent = s.level.toFixed(1);
   card.querySelector('.d-rain').textContent = s.rain.toFixed(1);
-  const perHr = s.trend * (60 / SIM_MIN_PER_TICK);
+  const perHr = mode === 'live' ? (s.trendPerHr || 0) : s.trend * (60 / SIM_MIN_PER_TICK);
   card.querySelector('.d-trend').textContent = `${perHr > 0 ? '+' : ''}${perHr.toFixed(1)}`;
   card.querySelector('.d-advice').textContent = l.advice;
   card.querySelector('.d-gauge span').style.height = `${Math.min(100, s.level / 50 * 100)}%`;
@@ -426,7 +529,15 @@ document.querySelectorAll('[data-toggle]').forEach((b) => b.addEventListener('cl
   document.body.classList.toggle(cls);
 }));
 
-// ---------- วนการจำลอง ----------
+$('#btn-mode').addEventListener('click', () => setMode(mode === 'live' ? 'demo' : 'live'));
+
+// ---------- วนการทำงาน ----------
 pushLog('เริ่มระบบเฝ้าระวัง · เชื่อมต่อสถานีวัด 18 จุด', 0);
-setInterval(() => { if (!hiddenByHost) { tick(); renderAll(); } }, 1000);
+setMode(mode);
+setInterval(() => {
+  if (hiddenByHost) return;
+  if (mode === 'live') liveTick(); else tick();
+  renderAll();
+}, 1000);
+setInterval(() => { if (mode === 'live' && !hiddenByHost) fetchLive(); }, 10 * 60 * 1000); // ฝนจริงอัปเดตทุก 10 นาที
 addEventListener('resize', renderChart);

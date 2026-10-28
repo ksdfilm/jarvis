@@ -26,7 +26,7 @@
   <!-- แผงซ้าย: ภาพรวม -->
   <aside class="panel left" aria-label="ภาพรวมสถานการณ์">
     <section class="box clock-box">
-      <div class="lbl">SIM TIME <span class="sim-tag">ข้อมูลจำลอง</span></div>
+      <div class="lbl"><span id="time-lbl">SIM TIME</span> <span class="sim-tag" id="sim-tag">ข้อมูลจำลอง</span></div>
       <div id="clock" class="clock">--:--</div>
       <div id="date" class="date"></div>
     </section>
@@ -73,11 +73,12 @@
       </dl>
     </div>
     <p class="d-advice"></p>
-    <p class="d-note">ตำแหน่งโดยประมาณ · ค่าทั้งหมดเป็นการจำลอง</p>
+    <p class="d-note" id="d-note">ตำแหน่งโดยประมาณ · ค่าทั้งหมดเป็นการจำลอง</p>
   </section>
 
   <!-- แถบควบคุม -->
   <nav class="controls" aria-label="ควบคุมมุมมอง">
+    <button type="button" id="btn-mode" title="สลับ ฝนจริง / จำลอง">📡 ฝนจริง</button>
     <button type="button" id="btn-tour" aria-pressed="false">✈ ทัวร์อัตโนมัติ</button>
     <button type="button" id="btn-city">⌖ ทั้งเมือง</button>
     <button type="button" id="btn-3d">2D</button>

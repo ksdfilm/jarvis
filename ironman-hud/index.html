@@ -19,6 +19,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <link href="css/hud.css" rel="stylesheet">
+  <!-- three.js สำหรับลูกโลก/ดวงจันทร์ 3 มิติ (โหลดเมื่อเปิดแผงนั้นครั้งแรก) -->
+  <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
 </head>
 <body data-theme="jarvis">
   <div class="fx-grid" aria-hidden="true"></div>
@@ -27,11 +29,34 @@
   <main class="hud">
     <header class="top">
       <div class="sys"><span class="blip"></span>E.D.I.T <small id="net">ONLINE</small></div>
-      <label class="city">
-        <span class="sr">เลือกเมือง</span>
-        <select id="city" aria-label="เลือกเมือง"></select>
-      </label>
+      <div class="top-r">
+        <button type="button" id="menu-btn" class="mic" aria-label="เมนูแผงทั้งหมด">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><rect x="14" y="14" width="6" height="6"/></svg>
+        </button>
+        <button type="button" id="set-btn" class="mic" aria-label="ตั้งค่า">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>
+        </button>
+        <button type="button" id="mic" class="mic" aria-label="สั่ง EDIT ด้วยเสียง">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>
+        </button>
+        <label class="city">
+          <span class="sr">เลือกเมือง</span>
+          <select id="city" aria-label="เลือกเมือง"></select>
+        </label>
+      </div>
     </header>
+
+    <!-- หน้าต่างคุยกับ EDIT -->
+    <section class="voice" id="voice" hidden aria-live="polite" aria-label="คุยกับ EDIT">
+      <button type="button" class="v-close" id="v-close" aria-label="ปิด">×</button>
+      <div class="v-orb" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="v-status" id="v-status">กำลังฟัง…</div>
+      <div class="v-heard" id="v-heard"></div>
+      <div class="v-reply" id="v-reply"></div>
+      <div class="v-action" id="v-action"></div>
+      <div class="v-chips" id="v-chips"></div>
+      <button type="button" class="v-again" id="v-again">🎙 พูดอีกครั้ง</button>
+    </section>
 
     <div class="stage" id="stage">
       <!-- 01 หน้าหลัก -->
@@ -50,6 +75,7 @@
             </div>
           </button>
           <div class="rlabels"><span>DAY <b id="day-pct">0%</b></span><span>YEAR <b id="year-pct">0%</b></span></div>
+          <button type="button" id="report-btn" class="report-btn">📋 รายงานประจำวัน</button>
         </div>
         <div class="gauges">
           <div class="g"><div class="g-lbl">TEMP · อุณหภูมิ</div><div class="g-val"><b id="temp">--</b><small>°C</small></div><div class="g-sub" id="feels">รู้สึกเหมือน --°</div></div>
@@ -138,7 +164,7 @@
 
       <!-- 06 แผนที่น้ำท่วม (ฝังแอป bkk-flood โหลดเมื่อเปิดแผงครั้งแรก) -->
       <section class="pnl" id="p-flood" aria-label="แผนที่เฝ้าระวังน้ำท่วม">
-        <h2 class="ph"><span>06</span>FLOOD <small>แผนที่น้ำท่วม กทม. (ข้อมูลจำลอง)</small></h2>
+        <h2 class="ph"><span>06</span>FLOOD <small>แผนที่น้ำท่วม กทม. (ฝนจริง · ระดับน้ำประมาณการ)</small></h2>
         <div class="flood-frame box">
           <iframe id="flood-frame" title="แผนที่เฝ้าระวังน้ำท่วมกรุงเทพฯ" loading="lazy" allow="fullscreen"></iframe>
           <a class="flood-full" href="../bkk-flood/" target="_blank" rel="noopener">⤢ เต็มจอ</a>
