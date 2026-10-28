@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Bangkok Flood Watch</title>
+  <meta name="description" content="แผนที่ 3 มิติกรุงเทพฯ ระบบเฝ้าระวังน้ำท่วม (ข้อมูลจำลอง)">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+  <div id="map"></div>
+  <div class="fx-vignette" aria-hidden="true"></div>
+  <div class="fx-scan" aria-hidden="true"></div>
+
+  <!-- หัวเรื่อง -->
+  <header class="title">
+    <h1>Bangkok situational visualization</h1>
+    <p>Flood warning <span class="warn">⚠</span> system <span class="th">· ระบบเฝ้าระวังน้ำท่วม กรุงเทพมหานคร</span></p>
+    <div id="banner" class="banner" data-lvl="0" role="status" aria-live="polite">กำลังเชื่อมต่อ…</div>
+  </header>
+
+  <!-- แผงซ้าย: ภาพรวม -->
+  <aside class="panel left" aria-label="ภาพรวมสถานการณ์">
+    <section class="box clock-box">
+      <div class="lbl">SIM TIME <span class="sim-tag">ข้อมูลจำลอง</span></div>
+      <div id="clock" class="clock">--:--</div>
+      <div id="date" class="date"></div>
+    </section>
+    <section class="box">
+      <div class="lbl">ALERT STATUS · จุดเฝ้าระวัง 18 จุด</div>
+      <div id="stats" class="stats"></div>
+    </section>
+    <section class="box">
+      <div class="lbl">RAINFALL · ปริมาณฝนเฉลี่ย</div>
+      <div class="rain"><b id="rain-avg">0.0</b> <span>มม./ชม.</span></div>
+      <div class="meter"><span id="rain-bar"></span></div>
+      <div class="sub">หนักสุด: <span id="rain-max">-</span></div>
+    </section>
+    <section class="box">
+      <div class="lbl">WATER LEVEL · ระดับน้ำ (ซม.) <span class="legend"><i class="c1"></i>เฉลี่ย <i class="c2"></i>สูงสุด</span></div>
+      <canvas id="chart" class="chart" role="img" aria-label="กราฟระดับน้ำเฉลี่ยและสูงสุด"></canvas>
+    </section>
+    <section class="box grow">
+      <div class="lbl">EVENT LOG · เหตุการณ์ล่าสุด</div>
+      <ul id="log" class="log"></ul>
+    </section>
+  </aside>
+
+  <!-- แผงขวา: รายชื่อจุด -->
+  <aside class="panel right" aria-label="จุดเฝ้าระวัง">
+    <section class="box grow">
+      <div class="lbl">MONITORING STATIONS · เรียงตามระดับน้ำ</div>
+      <ul id="list" class="list"></ul>
+    </section>
+  </aside>
+
+  <!-- การ์ดรายละเอียดจุดที่เลือก -->
+  <section id="detail" class="detail" hidden aria-live="polite">
+    <button type="button" class="d-close" aria-label="ปิด">×</button>
+    <div class="d-status"></div>
+    <h2 class="d-name"></h2>
+    <div class="d-en"></div>
+    <div class="d-body">
+      <div class="d-gauge" aria-hidden="true"><span></span></div>
+      <dl>
+        <div><dt>ระดับน้ำ</dt><dd><b class="d-level">0</b> ซม.</dd></div>
+        <div><dt>ฝน</dt><dd><b class="d-rain">0</b> มม./ชม.</dd></div>
+        <div><dt>แนวโน้ม</dt><dd><b class="d-trend">0</b> ซม./ชม.</dd></div>
+      </dl>
+    </div>
+    <p class="d-advice"></p>
+    <p class="d-note">ตำแหน่งโดยประมาณ · ค่าทั้งหมดเป็นการจำลอง</p>
+  </section>
+
+  <!-- แถบควบคุม -->
+  <nav class="controls" aria-label="ควบคุมมุมมอง">
+    <button type="button" id="btn-tour" aria-pressed="false">✈ ทัวร์อัตโนมัติ</button>
+    <button type="button" id="btn-city">⌖ ทั้งเมือง</button>
+    <button type="button" id="btn-3d">2D</button>
+    <button type="button" id="btn-pause">⏸ หยุดจำลอง</button>
+    <button type="button" class="m-only" data-toggle="show-left">ภาพรวม</button>
+    <button type="button" class="m-only" data-toggle="show-right">จุดเตือน</button>
+  </nav>
+
+  <div class="legend-bar" aria-hidden="true">
+    <span style="--c:#2ee6a6">ปกติ &lt;5</span>
+    <span style="--c:#ffd23f">เฝ้าระวัง 5–15</span>
+    <span style="--c:#ff8a3d">เตือนภัย 15–30</span>
+    <span style="--c:#ff3b5c">วิกฤต 30+ ซม.</span>
+    <span style="--c:#a68bff">กลุ่มฝน</span>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

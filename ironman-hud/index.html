@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>JARVIS HUD</title>
+  <meta name="description" content="หน้าจอ HUD สไตล์ไอรอนแมน: นาฬิกา โอกาสฝน ฝุ่น PM2.5 และทางลัดเปิดแอป">
+  <!-- iPhone: กด "เพิ่มไปยังหน้าจอโฮม" แล้วเปิดแบบเต็มจอเหมือนแอป -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="JARVIS">
+  <meta name="theme-color" content="#02070d">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" href="icons/icon-180.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link href="css/hud.css" rel="stylesheet">
+</head>
+<body data-theme="jarvis">
+  <div class="fx-grid" aria-hidden="true"></div>
+  <div class="fx-scan" aria-hidden="true"></div>
+
+  <main class="hud">
+    <header class="top">
+      <div class="sys"><span class="blip"></span>J.A.R.V.I.S <small id="net">ONLINE</small></div>
+      <label class="city">
+        <span class="sr">เลือกเมือง</span>
+        <select id="city" aria-label="เลือกเมือง"></select>
+      </label>
+    </header>
+
+    <div class="stage" id="stage">
+      <!-- 01 หน้าหลัก -->
+      <section class="pnl" id="p-home" aria-label="หน้าหลัก">
+        <div class="greet">
+          <button type="button" id="name-btn" class="greet-en">GOOD EVENING, <b id="name">SIR</b></button>
+          <div class="greet-th" id="greet-th">สวัสดีตอนเย็น</div>
+        </div>
+        <div class="reactor-wrap">
+          <button type="button" class="reactor" id="reactor" aria-label="เปลี่ยนธีมสี">
+            <svg viewBox="0 0 320 320" id="reactor-svg" aria-hidden="true"></svg>
+            <div class="core">
+              <div class="time"><span id="hhmm">--:--</span><small id="ss">--</small></div>
+              <div class="date" id="date"></div>
+              <div class="cond" id="cond-mini"></div>
+            </div>
+          </button>
+          <div class="rlabels"><span>DAY <b id="day-pct">0%</b></span><span>YEAR <b id="year-pct">0%</b></span></div>
+        </div>
+        <div class="gauges">
+          <div class="g"><div class="g-lbl">TEMP · อุณหภูมิ</div><div class="g-val"><b id="temp">--</b><small>°C</small></div><div class="g-sub" id="feels">รู้สึกเหมือน --°</div></div>
+          <button type="button" class="g go" data-go="1"><div class="g-lbl">RAIN · โอกาสฝน</div><div class="g-val"><b id="rain-now">--</b><small>%</small></div><div class="g-bar"><span id="rain-now-bar"></span></div></button>
+          <button type="button" class="g go aq" data-go="2"><div class="g-lbl">PM2.5 · ฝุ่น</div><div class="g-val"><b id="pm">--</b><small>µg</small></div><div class="g-sub" id="aqi-txt">AQI --</div></button>
+        </div>
+      </section>
+
+      <!-- 02 โอกาสฝน -->
+      <section class="pnl" id="p-rain" aria-label="โอกาสฝน">
+        <h2 class="ph"><span>02</span>RAIN <small>โอกาสฝนตก</small></h2>
+        <div class="big">
+          <svg viewBox="0 0 200 200" class="ring" id="rain-ring" aria-hidden="true"></svg>
+          <div class="big-core"><b id="rain-big">--</b><small>%</small><span>โอกาสฝนชั่วโมงนี้</span></div>
+        </div>
+        <p class="summary" id="rain-summary">กำลังโหลด…</p>
+        <div class="box">
+          <div class="p-lbl">NEXT 24H · โอกาสฝนรายชั่วโมง (%)</div>
+          <div class="bars" id="rain-bars"></div>
+          <div class="bar-axis" id="rain-axis"></div>
+        </div>
+        <div class="box">
+          <div class="p-lbl">7 DAYS · โอกาสฝนสูงสุด / ปริมาณฝน</div>
+          <div class="rows" id="rain-days"></div>
+        </div>
+      </section>
+
+      <!-- 03 ฝุ่น PM2.5 -->
+      <section class="pnl" id="p-air" aria-label="ฝุ่น PM2.5">
+        <h2 class="ph"><span>03</span>AIR <small>ฝุ่น PM2.5</small></h2>
+        <div class="big aq">
+          <svg viewBox="0 0 200 200" class="ring" id="air-ring" aria-hidden="true"></svg>
+          <div class="big-core"><b id="pm-big">--</b><small>µg/m³</small><span id="aqi-big">AQI --</span></div>
+        </div>
+        <p class="summary aqtext" id="air-advice">กำลังโหลด…</p>
+        <div class="box">
+          <div class="p-lbl">เทียบเกณฑ์มาตรฐานไทย (เฉลี่ย 24 ชม. ไม่เกิน 37.5 µg/m³)</div>
+          <div class="std"><span id="std-bar"></span><i class="std-line"></i></div>
+          <div class="std-txt" id="std-txt"></div>
+        </div>
+        <div class="box">
+          <div class="p-lbl">NEXT 24H · PM2.5 รายชั่วโมง (µg/m³)</div>
+          <div class="bars" id="air-bars"></div>
+          <div class="bar-axis" id="air-axis"></div>
+        </div>
+        <div class="box">
+          <div class="p-lbl">5 DAYS · ค่าเฉลี่ย / สูงสุดรายวัน</div>
+          <div class="rows" id="air-days"></div>
+        </div>
+      </section>
+
+      <!-- 04 พยากรณ์ -->
+      <section class="pnl" id="p-week" aria-label="พยากรณ์อากาศ">
+        <h2 class="ph"><span>04</span>FORECAST <small>พยากรณ์อากาศ</small></h2>
+        <div class="box">
+          <div class="p-lbl">NEXT 12H · อุณหภูมิ / โอกาสฝน</div>
+          <svg id="hourly" class="hourly" viewBox="0 0 360 96" preserveAspectRatio="none" role="img" aria-label="กราฟพยากรณ์ 12 ชั่วโมง"></svg>
+          <div class="hours" id="hours"></div>
+        </div>
+        <div class="box">
+          <div class="p-lbl">7-DAY · พยากรณ์ 7 วัน</div>
+          <div class="days" id="days"></div>
+        </div>
+        <div class="facts">
+          <div><span>SUNRISE</span><b id="sunrise">--:--</b></div>
+          <div><span>SUNSET</span><b id="sunset">--:--</b></div>
+          <div><span>HUMID</span><b id="humid">--</b></div>
+          <div><span>UV MAX</span><b id="uv">--</b></div>
+          <div class="wide"><span>WIND · ลม</span><b id="wind">--</b></div>
+          <div class="wide"><span>MOON · ดวงจันทร์</span><b id="moon">--</b></div>
+        </div>
+      </section>
+
+      <!-- 05 ทางลัดแอป -->
+      <section class="pnl" id="p-apps" aria-label="ทางลัดเปิดแอป">
+        <h2 class="ph"><span>05</span>APPS <small>ทางลัดเปิดแอป</small></h2>
+        <div class="apps" id="apps">
+          <div class="apps-core"><span id="apps-time">--:--</span><small>แตะไอคอนเพื่อเปิดแอป</small></div>
+        </div>
+        <div class="apps-tools">
+          <button type="button" id="apps-edit" aria-pressed="false">✎ แก้ไขทางลัด</button>
+          <button type="button" id="apps-reset">คืนค่าเริ่มต้น</button>
+        </div>
+        <p class="hint" id="apps-hint">ครั้งแรก iPhone จะถามว่า "เปิดในแอป…?" ให้กด <b>เปิด</b> · แอปที่ไม่ได้ติดตั้งจะเปิดไม่ได้</p>
+      </section>
+
+      <!-- 06 แผนที่น้ำท่วม (ฝังแอป bkk-flood โหลดเมื่อเปิดแผงครั้งแรก) -->
+      <section class="pnl" id="p-flood" aria-label="แผนที่เฝ้าระวังน้ำท่วม">
+        <h2 class="ph"><span>06</span>FLOOD <small>แผนที่น้ำท่วม กทม. (ข้อมูลจำลอง)</small></h2>
+        <div class="flood-frame box">
+          <iframe id="flood-frame" title="แผนที่เฝ้าระวังน้ำท่วมกรุงเทพฯ" loading="lazy" allow="fullscreen"></iframe>
+          <a class="flood-full" href="../bkk-flood/" target="_blank" rel="noopener">⤢ เต็มจอ</a>
+        </div>
+        <p class="hint">ลากนิ้วบนแผนที่ = เลื่อน/หมุนแผนที่ · ใช้หน้าปัดด้านล่างเพื่อเปลี่ยนแผง</p>
+      </section>
+    </div>
+
+    <footer class="foot">
+      <span id="updated">กำลังโหลดข้อมูลอากาศ…</span>
+      <span>ข้อมูล <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a></span>
+    </footer>
+  </main>
+
+  <!-- หน้าปัดหมุนเปลี่ยนแผง (ลากซ้าย-ขวา หรือแตะหมายเลข) -->
+  <nav class="dial" id="dial" aria-label="เปลี่ยนแผง">
+    <div class="dial-ring" id="dial-ring" aria-hidden="true"></div>
+    <div class="dial-items" id="dial-items"></div>
+    <div class="dial-pointer" aria-hidden="true"></div>
+  </nav>
+
+  <script type="module" src="js/hud.js"></script>
+</body>
+</html>
