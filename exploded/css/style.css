@@ -503,3 +503,55 @@ body.embed .brand, body.embed .tabs { display: none; } /* แอปมีปุ�
   .card { max-width: 100%; }
   .card h2 { font-size: 17px; }
 }
+
+/* ===== โหมดเห็นแค่โมเดล: ไม่มีตัวหนังสือบนจอ (ข้อความอยู่ในเมนู ☰ / ป้ายชื่อ 🏷 / แตะชิ้นส่วน) ===== */
+.brand, .tabs, #hint, #credit, .step .card { display: none !important; }
+.topbar { background: none; padding: 12px 14px; pointer-events: none; }
+.topbar .tools { pointer-events: auto; margin-left: auto; }
+.btn.ico { width: 40px; height: 40px; padding: 0; display: grid; place-items: center; border-radius: 50%; background: rgba(12, 16, 24, 0.55); }
+.btn.ico svg { width: 19px; height: 19px; fill: none; stroke: var(--text-soft); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.btn.ico:hover svg, .btn.ico.on svg { stroke: var(--accent); }
+.btn.ico.on { border-color: var(--accent); background: var(--accent-soft); }
+#dots { gap: 11px; }
+#dots button { width: 8px; height: 8px; }
+#dots button::after { display: none; }
+
+/* เมนู ☰ */
+#menu { position: fixed; inset: 0; z-index: 9; background: rgba(4, 6, 10, 0.55); backdrop-filter: blur(4px); display: flex; justify-content: flex-end; }
+#menu[hidden] { display: none; }
+.menu-box { position: relative; width: min(340px, 92vw); height: 100%; overflow: auto; padding: 22px 20px; background: var(--panel-strong); border-left: 1px solid var(--line-strong); box-shadow: -20px 0 60px rgba(0, 0, 0, 0.45); }
+.menu-sec { margin-bottom: 18px; }
+.menu-sec h4 { margin: 0 0 8px; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: var(--accent); }
+.menu-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.menu-how, .menu-credit { margin: 0; font-size: 13px; line-height: 1.65; color: var(--text-soft); }
+.menu-credit a { color: var(--text); }
+/* ในแอป EDIT: พื้นหลังโปร่งใส ให้โมเดลลอยอยู่บนพื้นหลังของแอปเลย (เลือกหัวข้อจากเมนู ☰) */
+html:has(body.embed), body.embed { background: transparent; }
+
+/* แผงข้อมูลตอนแตะชิ้นส่วน: บางลงเล็กน้อย */
+#info { width: 330px; padding: 18px; }
+
+/* ===== มือถือแนวนอน (เตี้ย): ปุ่มเล็กลง แผงข้อมูลชิดขวาเต็มความสูง ===== */
+@media (orientation: landscape) and (max-height: 520px) {
+  .topbar { padding: 8px 10px; }
+  .btn.ico { width: 34px; height: 34px; }
+  .btn.ico svg { width: 17px; height: 17px; }
+  .tools { gap: 6px; }
+  #dots { right: 14px; gap: 8px; }
+  .step { padding: 0; }
+  #info { top: 8px; right: 8px; bottom: 8px; left: auto; width: min(320px, 44vw); max-height: none; padding: 14px; transform: translateX(24px); }
+  #info h3 { font-size: 18px; margin-right: 34px; }
+  #info p { font-size: 13px; margin-top: 8px; line-height: 1.55; }
+  #info h4 { margin-top: 10px; }
+  #info li { font-size: 12.5px; }
+  .info-nav { margin-top: 12px; }
+  .tag { padding: 2px 7px; }
+  .tag b { font-size: 11px; }
+  .tag span { display: none; }
+}
+
+/* ไม่มีแผงข้อความรายละเอียดชิ้นส่วน */
+#info { display: none !important; }
+/* ในแอป EDIT: ไม่มีแถบเลื่อนข้างจอ (ยังเลื่อนได้ตามปกติ) */
+html:has(body.embed) { scrollbar-width: none; }
+body.embed::-webkit-scrollbar, html:has(body.embed)::-webkit-scrollbar { display: none; }

@@ -30,26 +30,23 @@ if (model.prepare) {
   const msg = $('#loader p');
   await model.prepare((f) => (msg.textContent = `กำลังโหลดโมเดล… ${Math.round(f * 100)}%`));
 }
-// แถบเลือกย่อยในหัวข้อ (เช่น เลือกดาวแต่ละดวง)
+// ---------- เมนู (☰): หัวข้อ · ตัวเลือกย่อย (เช่น เลือกดาว) · วิธีใช้ · เครดิต ----------
+// หน้าจอปกติไม่มีตัวหนังสือเลย มีแค่โมเดล — ข้อความทั้งหมดอยู่ในเมนูนี้
+const menu = $('#menu');
+const keepEmbed = new URLSearchParams(location.search).has('embed') ? '&embed=1' : '';
+$('#menu-topics .menu-list').innerHTML = [...document.querySelectorAll('.tab[data-topic]')]
+  .map((a) => `<a class="pick${a.dataset.topic === topic ? ' active' : ''}" href="?topic=${a.dataset.topic}${keepEmbed}">${a.textContent}</a>`).join('');
 if (model.picker) {
-  const nav = document.createElement('nav');
-  nav.className = 'picker';
-  nav.setAttribute('aria-label', 'เลือก');
-  for (const item of model.picker) {
-    const a = document.createElement('a');
-    a.className = 'pick' + (item.active ? ' active' : '');
-    a.href = item.href;
-    a.textContent = item.label;
-    nav.appendChild(a);
-  }
-  document.body.appendChild(nav);
-  document.body.classList.add('has-picker');
-  nav.querySelector('.active')?.scrollIntoView({ inline: 'center', block: 'nearest' });
+  $('#menu-pick').hidden = false;
+  $('#menu-pick .menu-list').innerHTML = model.picker
+    .map((item) => `<a class="pick${item.active ? ' active' : ''}" href="${item.href}${keepEmbed && !item.href.includes('embed') ? keepEmbed : ''}">${item.label}</a>`).join('');
 }
-if (model.credit) {
-  $('#credit').innerHTML = model.credit;
-  $('#credit').hidden = false;
-}
+if (model.credit) $('#menu-credit').innerHTML = model.credit; // เครดิตตามสัญญาอนุญาต (CC BY / BY-SA) อยู่ในเมนู
+const toggleMenu = (show) => { menu.hidden = !show; };
+$('#menu-open').addEventListener('click', () => toggleMenu(menu.hidden));
+$('#menu-close').addEventListener('click', () => toggleMenu(false));
+menu.addEventListener('click', (e) => { if (e.target === menu) toggleMenu(false); });
+addEventListener('keydown', (e) => { if (e.key === 'Escape') toggleMenu(false); });
 
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -94,6 +91,7 @@ const floor = new THREE.Mesh(
 );
 floor.rotation.x = -Math.PI / 2;
 floor.position.y = model.floorY ?? -1.08;
+floor.visible = false; // ไม่มีพื้นเรืองแสง: ให้โมเดลลอยเปล่าๆ
 root.add(floor);
 
 // ---------- ชิ้นส่วน ----------
@@ -332,13 +330,15 @@ for (const p of parts) {
   p.ui = { tag, line, dot, show: false };
 }
 
-const LABEL_MODES = ['auto', 'all', 'off'];
-const LABEL_TEXT = { auto: 'อัตโนมัติ', all: 'ทั้งหมด', off: 'ปิด' };
-let labelMode = 'auto';
+// ป้ายชื่อชิ้นส่วน: เริ่มต้น "ปิด" (เห็นแค่โมเดล) · กดไอคอน 🏷 เพื่อเปิด/ปิด
+let labelMode = 'off';
 const labelBtn = $('#label-mode');
 labelBtn.addEventListener('click', () => {
-  labelMode = LABEL_MODES[(LABEL_MODES.indexOf(labelMode) + 1) % LABEL_MODES.length];
-  labelBtn.innerHTML = `<span>ป้ายชื่อ: </span>${LABEL_TEXT[labelMode]}`; // มือถือซ่อนคำนำหน้า
+  labelMode = labelMode === 'off' ? 'auto' : 'off';
+  const on = labelMode !== 'off';
+  labelBtn.classList.toggle('on', on);
+  labelBtn.setAttribute('aria-pressed', on);
+  labelBtn.setAttribute('aria-label', `ป้ายชื่อชิ้นส่วน: ${on ? 'เปิด' : 'ปิด'}`);
 });
 $('#reset-view').addEventListener('click', resetView);
 
@@ -476,11 +476,13 @@ function setHover(p) {
 }
 
 const info = $('#info');
+const SHOW_INFO = false;
 function select(p) {
   selected = p;
   applyHighlight();
   focusOn(p);
-  if (!p) {
+  // แตะชิ้นส่วน = ไฮไลต์และซูมเท่านั้น ไม่มีแผงข้อความรายละเอียด (ผู้ใช้ต้องการให้จอมีแต่โมเดล)
+  if (!p || !SHOW_INFO) {
     document.body.classList.remove('has-info');
     return;
   }

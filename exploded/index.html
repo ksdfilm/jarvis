@@ -33,11 +33,26 @@
       <a class="tab" data-topic="ironman" href="?topic=ironman">ไอรอนแมน</a>
       <a class="tab" data-topic="planets" href="?topic=planets">ดาว</a>
     </nav>
+    <!-- ปุ่มไอคอนล้วน: หน้าจอปกติเห็นแค่โมเดล ตัวหนังสืออยู่ในเมนู/ป้ายชื่อที่เปิดเอง -->
     <div class="tools">
-      <button class="btn" id="label-mode" type="button"><span>ป้ายชื่อ: </span>อัตโนมัติ</button>
-      <button class="btn" id="reset-view" type="button" title="รีเซ็ตมุมมอง">↺<span> มุมมองเดิม</span></button>
+      <button class="btn ico" id="menu-open" type="button" aria-label="เลือกหัวข้อและข้อมูลโมเดล" title="เมนู">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+      <button class="btn ico" id="label-mode" type="button" aria-pressed="false" aria-label="ป้ายชื่อชิ้นส่วน: ปิด" title="ป้ายชื่อชิ้นส่วน">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/></svg></button>
+      <button class="btn ico" id="reset-view" type="button" aria-label="รีเซ็ตมุมมอง" title="มุมมองเดิม">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v5h5"/></svg></button>
     </div>
   </header>
+
+  <div id="menu" hidden>
+    <div class="menu-box" role="dialog" aria-label="เมนู">
+      <button class="info-close" id="menu-close" type="button" aria-label="ปิด">✕</button>
+      <div class="menu-sec" id="menu-topics"><h4>หัวข้อ</h4><div class="menu-list"></div></div>
+      <div class="menu-sec" id="menu-pick" hidden><h4>เลือก</h4><div class="menu-list"></div></div>
+      <div class="menu-sec"><h4>วิธีใช้</h4><p class="menu-how">เลื่อน = แยกชิ้นส่วนทีละชั้น · ลาก = หมุน · แตะชิ้นส่วน = ซูมและอ่านข้อมูล · 🏷 = เปิดป้ายชื่อ</p></div>
+      <div class="menu-sec"><h4>เครดิต</h4><p class="menu-credit" id="menu-credit">โมเดลสร้างจากโค้ด</p></div>
+    </div>
+  </div>
 
   <nav id="dots" aria-label="ขั้นตอน"></nav>
   <main id="steps"></main>
