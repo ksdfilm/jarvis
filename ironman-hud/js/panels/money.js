@@ -1,8 +1,9 @@
 // แผง MONEY: อัตราแลกเปลี่ยน (ExchangeRate-API ฟรี วันละครั้ง) · คริปโต (CoinGecko ฟรี) · ตัวแปลงสกุลเงิน
+// + ราคาน้ำมันวันนี้เทียบเมื่อวาน (data/oil.json — GitHub Actions ดึงจากบางจากทุก 3 ชม.)
 // หมายเหตุ: ราคาทองคำไทยยังไม่มีแหล่งฟรีที่เปิดให้หน้าเว็บดึงได้ จึงยังไม่ใส่
 import { getJSON } from '../lib/load.js';
 
-let ctx, fx = null, coins = null, timer = 0;
+let ctx, fx = null, coins = null, oil = null, timer = 0;
 const SHOW = [['USD', 'ดอลลาร์สหรัฐ', 1], ['EUR', 'ยูโร', 1], ['JPY', 'เยนญี่ปุ่น', 100], ['CNY', 'หยวนจีน', 1], ['GBP', 'ปอนด์', 1], ['KRW', 'วอนเกาหลี', 1000], ['SGD', 'ดอลลาร์สิงคโปร์', 1], ['MYR', 'ริงกิต', 1], ['LAK', 'กีบลาว', 10000], ['MMK', 'จ๊าดพม่า', 1000]];
 const COINS = [['bitcoin', 'BTC', 'บิทคอยน์'], ['ethereum', 'ETH', 'อีเธอเรียม'], ['binancecoin', 'BNB', 'บีเอ็นบี'], ['solana', 'SOL', 'โซลานา'], ['ripple', 'XRP', 'ริปเปิล'], ['dogecoin', 'DOGE', 'โดจคอยน์']];
 const NAMES_TH = { USD: ['ดอลลาร์', 'usd', 'ดอล'], EUR: ['ยูโร', 'eur'], JPY: ['เยน', 'jpy'], CNY: ['หยวน', 'cny'], GBP: ['ปอนด์', 'gbp'], KRW: ['วอน', 'krw'], SGD: ['สิงคโปร์', 'sgd'], MYR: ['ริงกิต', 'myr'], LAK: ['กีบ', 'lak'], THB: ['บาท', 'thb'] };
@@ -21,8 +22,28 @@ async function load() {
     const d = await getJSON(`https://api.coingecko.com/api/v3/simple/price?ids=${COINS.map((c) => c[0]).join(',')}&vs_currencies=thb,usd&include_24hr_change=true`);
     coins = { d, at: Date.now() };
   } catch { /* ใช้ค่าเดิม */ }
+  try { oil = await getJSON(`data/oil.json?h=${Math.floor(Date.now() / 3600e3)}`); } catch { /* ยังไม่มีไฟล์ */ }
   render();
+  renderOil();
 }
+// ---------- ราคาน้ำมัน ----------
+const baht = (v) => Number(v).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); // ราคาน้ำมันแสดงทศนิยม 2 ตำแหน่งเสมอ
+const diffTxt = (d) => (Math.abs(d) < 0.005 ? '<small class="eq">คงที่</small>' : `<small class="${d > 0 ? 'down' : 'up'}">${d > 0 ? '▲' : '▼'} ${baht(Math.abs(d))}</small>`);
+function renderOil() {
+  const box = document.getElementById('mn-oil');
+  if (!box) return;
+  if (!oil?.items?.length) { box.innerHTML = '<p class="hint left">ยังไม่มีข้อมูลราคาน้ำมัน (รอระบบอัปเดตอัตโนมัติบน GitHub)</p>'; return; }
+  box.innerHTML = oil.items.map((o) => {
+    const d = o.today - o.yesterday, t = o.tomorrow - o.today;
+    return `<div class="fx-row oil"><span><b>${ctx.esc(o.name)}</b><small>เมื่อวาน ${baht(o.yesterday)}${Math.abs(t) >= 0.005 ? ` · <em class="${t > 0 ? 'down' : 'up'}">พรุ่งนี้ ${baht(o.tomorrow)}</em>` : ''}</small></span><em>${baht(o.today)} ฿${diffTxt(d)}</em></div>`;
+  }).join('');
+  document.getElementById('mn-oil-at').textContent = `${oil.remark || ''} · ${oil.source}`;
+}
+function oilChanges() {
+  if (!oil?.items) return { today: [], tomorrow: [] };
+  return { today: oil.items.filter((o) => Math.abs(o.today - o.yesterday) >= 0.005), tomorrow: oil.items.filter((o) => Math.abs(o.tomorrow - o.today) >= 0.005) };
+}
+
 function render() {
   if (fx) {
     document.getElementById('mn-fx').innerHTML = SHOW.filter(([c]) => fx.rates[c]).map(([c, n, u]) => `<div class="fx-row"><span><b>${u.toLocaleString()} ${c}</b><small>${n}</small></span><em>${num(thbPer(c) * u, 4)} ฿</em></div>`).join('');
@@ -64,7 +85,8 @@ function parseMoney(q) {
 
 export default {
   id: 'p-money', en: 'MONEY', th: 'การเงิน', sub: 'อัตราแลกเปลี่ยน · คริปโต · แปลงเงิน',
-  html: `<div class="box"><div class="p-lbl">CONVERTER · แปลงสกุลเงิน</div>
+  html: `<div class="box"><div class="p-lbl">OIL · ราคาน้ำมันวันนี้ (บาท/ลิตร) เทียบเมื่อวาน</div><div id="mn-oil"><p class="hint left">กำลังโหลด…</p></div><p class="hint left" id="mn-oil-at"></p></div>
+    <div class="box"><div class="p-lbl">CONVERTER · แปลงสกุลเงิน</div>
       <div class="mn-conv"><input id="mn-amt" inputmode="decimal" value="100" aria-label="จำนวนเงิน"><select id="mn-from" aria-label="จาก"></select><button type="button" id="mn-swap" aria-label="สลับ">⇄</button><select id="mn-to" aria-label="เป็น"></select></div>
       <div class="mn-res" id="mn-res">—</div></div>
     <div class="box"><div class="p-lbl">EXCHANGE RATES · อัตราแลกเปลี่ยน (เทียบบาท)</div><div id="mn-fx"><p class="hint left">กำลังโหลด…</p></div><p class="hint left" id="mn-fx-at"></p></div>
@@ -75,7 +97,20 @@ export default {
     document.getElementById('mn-swap').addEventListener('click', () => { const f = document.getElementById('mn-from'), t = document.getElementById('mn-to'); [f.value, t.value] = [t.value, f.value]; calc(); });
     setTimeout(load, 9000); // โหลดค่าเงินล่วงหน้า (เก็บไว้ 6 ชม.) ให้คำสั่งเสียงตอบได้ทันที
     const go = () => ctx.panels.findIndex((p) => p.id === 'p-money');
-    ctx.addIntent(/บิท|bitcoin|btc|คริปโต|อีเธอ|coins/, () => {
+    ctx.addIntent(/น้ำมัน|ดีเซล|แก๊สโซฮอล์|โซฮอล์|เบนซิน|ค่าน้ำมัน|oil/, (q) => {
+      if (!oil?.items) { load(); return { text: 'กำลังโหลดราคาน้ำมันค่ะ', go: go() }; }
+      const pick = oil.items.find((o) => q.includes(o.name.replace(/\s+/g, '').toLowerCase().slice(0, 6))) || (/ดีเซล/.test(q) ? oil.items.find((o) => /ดีเซล/.test(o.name)) : null);
+      const ch = oilChanges();
+      if (pick) return { text: `${pick.name} วันนี้ลิตรละ ${num(pick.today)} บาท ${Math.abs(pick.today - pick.yesterday) < 0.005 ? 'เท่ากับเมื่อวาน' : `${pick.today > pick.yesterday ? 'ขึ้น' : 'ลง'} ${num(Math.abs(pick.today - pick.yesterday))} บาทจากเมื่อวาน`}ค่ะ`, go: go() };
+      return { text: ch.today.length ? `วันนี้น้ำมันปรับราคา ${ch.today.length} ชนิด เช่น ${ch.today[0].name} ${ch.today[0].today > ch.today[0].yesterday ? 'ขึ้น' : 'ลง'} ${num(Math.abs(ch.today[0].today - ch.today[0].yesterday))} บาท เหลือลิตรละ ${num(ch.today[0].today)} บาทค่ะ` : 'วันนี้ราคาน้ำมันเท่ากับเมื่อวานทุกชนิดค่ะ', go: go() };
+    }, 'ราคาน้ำมันวันนี้');
+    ctx.addReporter(() => {
+      const ch = oilChanges();
+      if (ch.tomorrow.length) return `พรุ่งนี้น้ำมันปรับราคา ${ch.tomorrow.length} ชนิด เช่น ${ch.tomorrow[0].name} ${ch.tomorrow[0].tomorrow > ch.tomorrow[0].today ? 'ขึ้น' : 'ลง'} ${num(Math.abs(ch.tomorrow[0].tomorrow - ch.tomorrow[0].today))} บาท`;
+      if (ch.today.length) return `วันนี้น้ำมันปรับราคา ${ch.today.length} ชนิด`;
+      return null;
+    });
+    ctx.addIntent(/บิท|bitcoin|btc|คริปโต|อีเธอ|crypto/, () => {
       if (!coins) { load(); return { text: 'กำลังโหลดราคาคริปโตค่ะ', go: go() }; }
       const b = coins.d.bitcoin;
       return { text: `บิทคอยน์ตอนนี้ ${Math.round(b.thb).toLocaleString()} บาท ${b.thb_24h_change >= 0 ? 'ขึ้น' : 'ลง'} ${Math.abs(b.thb_24h_change).toFixed(1)} เปอร์เซ็นต์ใน 24 ชั่วโมงค่ะ`, go: go() };

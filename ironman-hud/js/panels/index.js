@@ -8,5 +8,7 @@ import calendar from './calendar.js';
 import money from './money.js';
 import tools from './tools.js';
 import work from './work.js';
+import steps from './steps.js';
+import system from './system.js';
 
-export default [earth, space, sense, cam, calendar, money, tools, work];
+export default [earth, space, sense, cam, calendar, money, tools, work, steps, system];

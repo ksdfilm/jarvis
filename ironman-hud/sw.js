@@ -2,7 +2,7 @@
 // มีเน็ต → โหลดเวอร์ชันล่าสุดจากเว็บก่อนเสมอ (อัปโหลดใหม่แล้วเห็นทันที) แล้วเก็บสำรองไว้
 // ไม่มีเน็ต/เน็ตช้าเกิน 4 วินาที → ใช้ตัวที่จำไว้
 // ข้อมูลอากาศไม่ผ่านตรงนี้ (แอปจำค่าล่าสุดไว้เองใน localStorage)
-const CACHE = 'edit-v8';
+const CACHE = 'edit-v9';
 const SHELL = ['./', 'index.html', 'css/hud.css', 'js/hud.js', 'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-512.png'];
 const TIMEOUT = 4000;
 

@@ -636,3 +636,54 @@ html.no-scroll, html.no-scroll body { overflow: hidden; }
   #p-home .reactor { width: min(36vw, calc(100dvh - 135px)); }
   #p-home .report-btn { margin-top: 4px; }
 }
+
+/* ราคาน้ำมัน */
+.fx-row.oil b { font-family: var(--sans); font-weight: 600; font-size: 14px; }
+.fx-row em small.eq { color: var(--muted); }
+.fx-row small em.up { color: #2ee6a6; font-style: normal; } .fx-row small em.down { color: #ff6b81; font-style: normal; }
+.fx-row em small.down { color: #ff6b81; } /* ราคาน้ำมันขึ้น = แดง */
+
+/* แผงก้าวเดิน */
+.st-main { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.st-ring { position: relative; width: min(64vw, 240px); aspect-ratio: 1; }
+.st-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.st-arc { fill: none; stroke: var(--hud); stroke-width: 10; stroke-linecap: round; filter: drop-shadow(0 0 7px var(--hud)); transition: stroke-dashoffset 0.4s; }
+.st-ring.done .st-arc { stroke: #2ee6a6; filter: drop-shadow(0 0 9px #2ee6a6); }
+.st-num { font-family: var(--mono); font-size: min(13vw, 52px); color: #fff; text-shadow: 0 0 14px rgba(var(--hud-rgb), 0.8); line-height: 1; }
+.st-goal { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.st-stats { grid-template-columns: repeat(3, 1fr); align-self: stretch; text-align: center; }
+.st-stats span { align-items: center; }
+.st-live { margin: 0; font-size: 13px; color: #2ee6a6; display: flex; align-items: center; gap: 6px; text-align: center; }
+.st-live i { width: 8px; height: 8px; border-radius: 50%; background: #2ee6a6; box-shadow: 0 0 8px #2ee6a6; animation: blip 1s infinite; flex: none; }
+.st-week { position: relative; display: flex; align-items: flex-end; gap: 6px; height: 150px; margin-top: 8px; }
+.st-bar { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 3px; }
+.st-bar span { width: 100%; max-width: 34px; background: rgba(var(--hud-rgb), 0.45); box-shadow: 0 0 6px rgba(var(--hud-rgb), 0.4); max-height: 78%; }
+.st-bar.hit span { background: #2ee6a6; box-shadow: 0 0 8px #2ee6a6; }
+.st-bar.now span { outline: 1px solid #fff; outline-offset: 1px; }
+.st-bar em { font-style: normal; font-family: var(--mono); font-size: 10px; color: #fff; min-height: 12px; }
+.st-bar small { font-size: 11px; color: var(--muted); }
+.st-goal-line { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--acc); opacity: 0.7; pointer-events: none; }
+
+/* แผงระบบ */
+.sg-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+.sg { position: relative; display: flex; flex-direction: column; align-items: center; }
+.sg svg { width: 100%; max-width: 190px; }
+.sg-bg, .sg-arc { fill: none; stroke-width: 7; stroke-linecap: round; }
+.sg-bg { stroke: rgba(var(--hud-rgb), 0.14); }
+.sg-arc { stroke: var(--hud); filter: drop-shadow(0 0 5px var(--hud)); transition: stroke-dashoffset 0.25s; }
+.sg b { position: absolute; top: 34%; font-family: var(--mono); font-weight: 400; font-size: min(8vw, 34px); color: #fff; }
+.sg small { margin-top: -8px; font-size: 11.5px; color: var(--muted); }
+.sy-ping { display: flex; justify-content: center; align-items: baseline; gap: 10px; margin-top: 6px; }
+.sy-ping span { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; color: var(--muted); }
+.sy-ping b { font-family: var(--mono); font-weight: 400; font-size: 26px; color: #fff; }
+.sy-ping small { font-size: 12px; color: var(--muted); font-family: var(--sans); }
+.sy-verdict { text-align: center; font-size: 14px; min-height: 1.4em; margin: 4px 0 8px; }
+.sy-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid rgba(var(--hud-rgb), 0.08); font-size: 13.5px; }
+.sy-row span { color: var(--muted); flex: none; }
+.sy-row b { font-weight: 500; color: #fff; text-align: right; word-break: break-word; }
+.sy-row b.yes { color: #2ee6a6; } .sy-row b.no { color: #ff9fae; }
+.sy-cap { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.sy-cap span { font-size: 12.5px; padding: 4px 9px; border: 1px solid; }
+.sy-cap .yes { color: #2ee6a6; border-color: #2ee6a666; background: #2ee6a610; }
+.sy-cap .no { color: #ff9fae; border-color: #ff3b5c55; background: #ff3b5c10; }
+#sy-batbar { margin-top: 6px; height: 8px; }

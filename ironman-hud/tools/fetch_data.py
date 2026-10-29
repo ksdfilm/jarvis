@@ -5,6 +5,7 @@
   storms.json   พายุหมุนเขตร้อนที่ยังมีอยู่ (GDACS)
   fires.json    จุดความร้อน/ไฟป่า 24 ชม. ในไทยและประเทศรอบๆ (NASA FIRMS, ดาวเทียม VIIRS)
   holidays.json วันหยุด/วันสำคัญของไทย 3 ปี (Google Calendar สาธารณะ)
+  oil.json      ราคาน้ำมันขายปลีก กทม. เมื่อวาน/วันนี้/พรุ่งนี้ (บางจาก)
 ถ้าแหล่งไหนล่ม จะเก็บไฟล์เดิมไว้ ไม่เขียนทับด้วยข้อมูลว่าง
 """
 import csv, datetime as dt, io, json, os, re, sys, urllib.request
@@ -88,12 +89,25 @@ def holidays():
     save('holidays.json', {'source': 'Google Calendar: วันหยุดในประเทศไทย', 'updated': now.date().isoformat(), 'items': items})
 
 
+def oil():
+    # ราคาขายปลีกน้ำมัน กทม. ของบางจาก (เมื่อวาน / วันนี้ / พรุ่งนี้) — API สาธารณะของเว็บบางจาก
+    d = json.loads(get('https://oil-price.bangchak.co.th/ApiOilPrice2/th'))[0]
+    raw = d.get('OilList')
+    lst = json.loads(raw) if isinstance(raw, str) else (raw or [])
+    items = [{'name': o['OilName'], 'yesterday': o.get('PriceYesterday'), 'today': o.get('PriceToday'), 'tomorrow': o.get('PriceTomorrow')} for o in lst if o.get('PriceToday')]
+    if not items:
+        raise RuntimeError('no oil data')
+    save('oil.json', {'source': 'บางจาก (oil-price.bangchak.co.th)', 'updated': now.isoformat(timespec='minutes'),
+                      'priceDate': d.get('OilPriceDate'), 'priceTime': d.get('OilPriceTime'),
+                      'remark': ' '.join(x for x in (d.get('OilRemark2'), d.get('OilRemark')) if x), 'items': items})
+
+
 if __name__ == '__main__':
     failed = 0
-    for job in (storms, fires, holidays):
+    for job in (storms, fires, holidays, oil):
         try:
             job()
         except Exception as e:  # noqa: BLE001 — แหล่งไหนล่มก็เก็บไฟล์เดิมไว้
             failed += 1
             print('FAILED', job.__name__, e)
-    sys.exit(1 if failed == 3 else 0)
+    sys.exit(1 if failed == 4 else 0)
