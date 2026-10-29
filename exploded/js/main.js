@@ -245,10 +245,19 @@ model.stages.forEach((s, i) => {
   const card = document.createElement('div');
   card.className = 'card';
   const eyebrow = i === 0 ? 'เริ่มต้น' : i === LAST ? 'สรุป' : `ขั้นที่ ${i} / ${LAST - 1}`;
-  card.innerHTML = `<div class="eyebrow">${eyebrow}</div><h2>${s.title}</h2><div class="en">${s.en}</div><p>${s.text}</p>`;
+  // การ์ดแบบย่อ: เห็นแค่ชื่อขั้นตอน — คำอธิบาย/รายชื่อชิ้นส่วนอยู่ใต้ปุ่ม "รายละเอียด" (จอโล่ง เห็นโมเดลเต็มๆ)
+  card.innerHTML = `<div class="card-head"><div><div class="eyebrow">${eyebrow}</div><h2>${s.title}</h2><div class="en">${s.en}</div></div>
+    <button type="button" class="more-btn" aria-expanded="false">รายละเอียด</button></div><div class="more"><p>${s.text}</p></div>`;
+  const more = card.querySelector('.more');
+  card.querySelector('.more-btn').addEventListener('click', (e) => {
+    const open = card.classList.toggle('open');
+    e.currentTarget.setAttribute('aria-expanded', open);
+    e.currentTarget.textContent = open ? 'ย่อ' : 'รายละเอียด';
+    updateSafeLeft();
+  });
 
   if (i === 0) {
-    card.insertAdjacentHTML(
+    more.insertAdjacentHTML(
       'beforeend',
       `<ul class="howto">
         <li><kbd>เลื่อน</kbd> แยกชิ้นส่วนทีละชั้น</li>
@@ -282,7 +291,7 @@ model.stages.forEach((s, i) => {
         chips.appendChild(b);
       }
     }
-    card.appendChild(chips);
+    more.appendChild(chips);
   }
   if (i === LAST) {
     const back = document.createElement('button');
@@ -552,6 +561,12 @@ function hideHint() {
   hint.classList.add('hide');
 }
 
+/** ป้ายชื่อหลบการ์ดเฉพาะตอนเปิดรายละเอียด (การ์ดย่ออยู่มุมล่าง ไม่ต้องกันพื้นที่ทั้งฝั่งซ้าย) */
+function updateSafeLeft() {
+  const open = steps.querySelector('.card.open');
+  safeLeft = innerWidth < 760 || !open ? 0 : open.getBoundingClientRect().right + 8;
+}
+
 function resize() {
   const w = innerWidth;
   const h = innerHeight;
@@ -559,7 +574,7 @@ function resize() {
   camera.aspect = w / h;
   fitScale = clamp(1.55 / camera.aspect, 1, 2.2);
   parts.forEach((p) => (p.ui.width = 0)); // วัดความกว้างป้ายใหม่ (ขนาดฟอนต์เปลี่ยนตามจอ)
-  safeLeft = w < 760 ? 0 : steps.querySelector('.card').getBoundingClientRect().right + 8;
+  updateSafeLeft();
   sectionH = steps.children[1] ? steps.children[1].offsetTop - steps.children[0].offsetTop : h;
   readScroll();
 }
