@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Exploded View — แยกชิ้นส่วน</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="scene"></canvas>
+  <div id="labels"><svg id="lines"></svg></div>
+
+  <div class="progress"><div id="bar"></div></div>
+
+  <header class="topbar">
+    <div class="brand"><i></i><span>Exploded View</span></div>
+    <nav class="tabs" aria-label="หัวข้อ">
+      <a class="tab" data-topic="pc" href="?topic=pc">คอมพิวเตอร์</a>
+      <a class="tab" data-topic="human" href="?topic=human">ร่างกายมนุษย์</a>
+      <a class="tab" data-topic="printer" href="?topic=printer">เครื่องพิมพ์</a>
+      <a class="tab" data-topic="car" href="?topic=car">รถยนต์</a>
+      <a class="tab" data-topic="ironman" href="?topic=ironman">ไอรอนแมน</a>
+      <a class="tab" data-topic="planets" href="?topic=planets">ดาว</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="label-mode" type="button"><span>ป้ายชื่อ: </span>อัตโนมัติ</button>
+      <button class="btn" id="reset-view" type="button" title="รีเซ็ตมุมมอง">↺<span> มุมมองเดิม</span></button>
+    </div>
+  </header>
+
+  <nav id="dots" aria-label="ขั้นตอน"></nav>
+  <main id="steps"></main>
+
+  <aside id="info" aria-live="polite">
+    <button class="info-close" id="info-close" type="button" aria-label="ปิด">✕</button>
+    <div class="eyebrow" id="info-cat"></div>
+    <h3 id="info-name"></h3>
+    <div class="info-en" id="info-en"></div>
+    <div class="info-zoom">
+      <button class="btn" id="zoom-out" type="button" aria-label="ซูมออก">−</button>
+      <button class="btn" id="zoom-in" type="button" aria-label="ซูมเข้า">+</button>
+      <span>ซูม · หมุนลูกกลิ้งหรือถ่างนิ้วบนโมเดลก็ได้</span>
+    </div>
+    <p id="info-desc"></p>
+    <h4>ข้อมูลน่ารู้</h4>
+    <ul id="info-facts"></ul>
+    <div class="info-nav">
+      <button class="btn" id="info-prev" type="button">‹ ก่อนหน้า</button>
+      <span id="info-count"></span>
+      <button class="btn" id="info-next" type="button">ถัดไป ›</button>
+    </div>
+  </aside>
+
+  <div id="hint">ลากเพื่อหมุน · เลื่อนเพื่อแยกชิ้นส่วน</div>
+  <footer id="credit" hidden></footer>
+
+  <div id="loader">
+    <div class="spinner"></div>
+    <p>กำลังโหลดโมเดล…</p>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+  <script>
+    // ES module เปิดจากไฟล์ตรงๆ (file://) ไม่ได้ ต้องเปิดผ่าน Apache ของ XAMPP
+    setTimeout(function () {
+      var l = document.getElementById('loader');
+      if (l && !l.classList.contains('done')) {
+        l.querySelector('p').textContent = location.protocol === 'file:'
+          ? 'ต้องเปิดผ่านเซิร์ฟเวอร์: เปิด Apache ใน XAMPP แล้วเข้า http://localhost/ksd/New%20folder/'
+          : 'โหลดไม่สำเร็จ ตรวจสอบอินเทอร์เน็ต (ต้องโหลด Three.js จาก CDN)';
+      }
+    }, 6000);
+  </script>
+</body>
+</html>

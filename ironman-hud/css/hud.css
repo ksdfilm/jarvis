@@ -687,3 +687,4 @@ html.no-scroll, html.no-scroll body { overflow: hidden; }
 .sy-cap .yes { color: #2ee6a6; border-color: #2ee6a666; background: #2ee6a610; }
 .sy-cap .no { color: #ff9fae; border-color: #ff3b5c55; background: #ff3b5c10; }
 #sy-batbar { margin-top: 6px; height: 8px; }
+.ex-frame .flood-full { right: auto; left: 6px; } /* ไม่ทับปุ่มป้ายชื่อ/รีเซ็ตของเว็บในกรอบ */

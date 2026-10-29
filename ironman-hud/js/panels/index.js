@@ -10,5 +10,6 @@ import tools from './tools.js';
 import work from './work.js';
 import steps from './steps.js';
 import system from './system.js';
+import explode from './explode.js';
 
-export default [earth, space, sense, cam, calendar, money, tools, work, steps, system];
+export default [earth, space, sense, cam, calendar, money, tools, work, steps, system, explode];
