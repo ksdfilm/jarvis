@@ -47,7 +47,9 @@ export const store = {
 export function bar(title, sub = '', right = '') {
   const el = document.createElement('header');
   el.className = 'lab-bar';
-  el.innerHTML = `<a class="back" href="../">◂ LAB</a><h1>${title}<small>${sub}</small></h1><div class="right">${right}</div>`;
+  // inside the EDIT HUD (iframe panel) the HUD is the navigation, so no back link
+  const embedded = window.self !== window.top;
+  el.innerHTML = `${embedded ? '' : '<a class="back" href="../">◂ LAB</a>'}<h1>${title}<small>${sub}</small></h1><div class="right">${right}</div>`;
   document.body.prepend(el);
   return el;
 }

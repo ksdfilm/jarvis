@@ -11,5 +11,8 @@ import work from './work.js';
 import steps from './steps.js';
 import system from './system.js';
 import explode from './explode.js';
+import lab from './lab.js';
+import bodyscan from './bodyscan.js';
+import apps from './apps.js';
 
-export default [earth, space, sense, cam, calendar, money, tools, work, steps, system, explode];
+export default [earth, space, sense, cam, calendar, money, tools, work, steps, system, explode, lab, bodyscan, ...apps];
