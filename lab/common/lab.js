@@ -26,13 +26,16 @@ export const onLan = () => /^(localhost|127\.|192\.168\.|10\.|172\.(1[6-9]|2\d|3
 // free Cloudflare Worker proxy (see ../remote/) — set once in config.js for everyone, or per device on the remote page
 import { WORKER } from './config.js';
 export const workerURL = () => store.get('worker', '') || WORKER;
-// URL that fetches `u` through a proxy: Worker first (works anywhere), else the XAMPP proxy on LAN; null if neither
+// URL that fetches `u` through a proxy: the XAMPP proxy on LAN (reaches every API, incl. OpenSky/adsb.fi which
+// block Cloudflare), else the Worker (works anywhere); null if neither
 export function proxyURL(u) {
+  if (onLan()) return `${new URL('./proxy.php', import.meta.url)}?u=${encodeURIComponent(u)}`;
   const w = workerURL();
   if (w) return `${w.replace(/\/?$/, '/')}?u=${encodeURIComponent(u)}`;
-  if (onLan()) return `${new URL('./proxy.php', import.meta.url)}?u=${encodeURIComponent(u)}`;
   return null;
 }
+// true when requests go through the Cloudflare Worker (adsb.lol only — adsb.fi/OpenSky refuse Cloudflare)
+export const viaWorker = () => !onLan() && !!workerURL();
 
 // localStorage that never throws
 export const store = {

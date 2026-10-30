@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import * as SAT from 'satellite.js';
-import { bar, store, toast, $, proxyURL, isPhone } from '../common/lab.js';
+import { bar, store, toast, $, proxyURL, viaWorker, isPhone } from '../common/lab.js';
 
 const RAD = Math.PI / 180, RE = 6371;
 const PHONE = isPhone();
@@ -119,6 +119,7 @@ async function loadFlights() {
   if (!proxyURL('x')) { msgs.flights = 'เครื่องบินต้องมีตัวกลาง: ตั้ง Cloudflare Worker (ฟรี) ในหน้า "ใช้จากนอกบริษัท" หรือเปิดผ่าน XAMPP/Tailscale — ชั้นอื่นใช้งานได้ปกติ'; renderLayers(); return; }
   const now = Date.now();
   try {
+    if (viaWorker()) throw new Error('opensky refuses Cloudflare'); // นอกบริษัท: OpenSky ไม่ตอบ Cloudflare → ไปใช้ข้อมูลรอบจุดกลางจอ
     if (now > openskyBlockedUntil) {
       const r = await fetch(proxy('https://opensky-network.org/api/states/all'), { cache: 'no-store' });
       if (!r.ok) throw new Error('opensky ' + r.status);
@@ -131,18 +132,21 @@ async function loadFlights() {
     } else throw new Error('opensky backoff');
   } catch (e) {
     // OpenSky จำกัดโควตาผู้ใช้ไม่ลงทะเบียน → ใช้ adsb.fi รัศมี 250 nm รอบจุดกลางจอแทน
-    if (now > openskyBlockedUntil) openskyBlockedUntil = now + 10 * 60e3;
+    const worker = viaWorker();
+    if (!worker && now > openskyBlockedUntil) openskyBlockedUntil = now + 10 * 60e3;
     const c = camLatLon();
+    // adsb.fi บล็อก Cloudflare → ผ่าน Worker ใช้ adsb.lol (รูปแบบข้อมูลเดียวกัน แต่อยู่ใน key "ac")
+    const host = worker ? 'https://api.adsb.lol/v2' : 'https://opendata.adsb.fi/api/v2', name = worker ? 'adsb.lol' : 'adsb.fi';
     try {
-      const r = await fetch(proxy(`https://opendata.adsb.fi/api/v2/lat/${c.lat.toFixed(2)}/lon/${c.lon.toFixed(2)}/dist/250`), { cache: 'no-store' });
-      if (!r.ok) throw new Error('adsb.fi ' + r.status);
+      const r = await fetch(proxy(`${host}/lat/${c.lat.toFixed(2)}/lon/${c.lon.toFixed(2)}/dist/250`), { cache: 'no-store' });
+      if (!r.ok) throw new Error(name + ' ' + r.status);
       const j = await r.json();
-      flights = (j.aircraft || []).filter(a => a.lat != null).map(a => ({
+      flights = (j.aircraft || j.ac || []).filter(a => a.lat != null).map(a => ({
         id: a.hex, cs: (a.flight || '').trim(), country: a.r || '', lon: a.lon, lat: a.lat, alt: a.alt_baro === 'ground' ? 0 : (a.alt_geom ?? a.alt_baro ?? 0) * 0.3048, ground: a.alt_baro === 'ground',
         gs: a.gs != null ? a.gs * 0.5144 : null, trk: a.track ?? 0, vr: a.baro_rate != null ? a.baro_rate * 0.00508 : null, sq: a.squawk, t: now - (a.seen_pos || 0) * 1000, type: a.t, desc: a.desc,
       }));
-      flightSrc = 'adsb.fi (รัศมี 460 กม. รอบจุดกลางจอ)';
-      msgs.flights = 'OpenSky เกินโควตา — ใช้ข้อมูลรอบจุดกลางจอแทน (ลองทั้งโลกใหม่ทุก 10 นาที)';
+      flightSrc = `${name} (รัศมี 460 กม. รอบจุดกลางจอ)`;
+      msgs.flights = worker ? 'นอกบริษัท: แสดงเครื่องบินรอบจุดกลางจอ (หมุนลูกโลกเพื่อดูที่อื่น) — ทั้งโลกดูได้เมื่อเปิดในบริษัท' : 'OpenSky เกินโควตา — ใช้ข้อมูลรอบจุดกลางจอแทน (ลองทั้งโลกใหม่ทุก 10 นาที)';
     } catch (e2) { msgs.flights = 'โหลดเครื่องบินไม่สำเร็จ — จะลองใหม่'; console.warn(e, e2); }
   }
   if (flights.length > CAP.flights) { // มือถือ: เลือกลำที่ใกล้จุดกลางจอก่อน

@@ -1,5 +1,5 @@
 // เรดาร์เครื่องบินเหนือหัว — ADS-B จาก adsb.fi (ผ่าน proxy ของ XAMPP เมื่อเปิดในวง LAN)
-import { bar, store, toast, $, proxyURL, clamp } from '../common/lab.js';
+import { bar, store, toast, $, proxyURL, viaWorker, clamp } from '../common/lab.js';
 
 const RAD = Math.PI / 180, R_E = 6371e3, FT = 0.3048, KT = 1.852;
 bar('OVERHEAD', 'เรดาร์เครื่องบินเหนือหัว · ADS-B สด', '<span class="mono" id="clock" style="color:var(--dim);font-size:13px"></span>');
@@ -112,6 +112,7 @@ async function poll(force) {
     ['adsb.fi', `https://opendata.adsb.fi/api/v2/lat/${la}/lon/${lo}/dist/${nm}`],
     ['adsb.lol', `https://api.adsb.lol/v2/lat/${la}/lon/${lo}/dist/${nm}`],
   ];
+  if (viaWorker()) srcs.reverse(); // adsb.fi บล็อก Cloudflare → ผ่าน Worker ลอง adsb.lol ก่อน
   for (const [name, u] of srcs) {
     try {
       const j = await fetchJSON(u);
