@@ -16,39 +16,35 @@
 <style>
   html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
   body { display: flex; flex-direction: column; }
+  /* the hologram fills the whole screen; controls float on top (portrait and landscape alike) */
   #view { position: relative; flex: 1; min-height: 0; overflow: hidden; touch-action: none; }
   #view > canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   #labels { position: absolute; inset: 0; pointer-events: none; }
   .lbl { position: absolute; transform: translate(-50%, -100%); white-space: nowrap; font-size: 12px; color: var(--c2); padding: 1px 6px;
          border-left: 1px solid var(--c); background: rgba(0, 16, 24, .6); transition: opacity .2s; }
   .lbl.sel { color: #001018; background: var(--warn); border-color: var(--warn); }
-  .pip { top: 10px; right: 10px; }
-  #hud { position: absolute; left: 10px; top: 10px; font-family: var(--mono); font-size: 13px; color: var(--c); text-shadow: 0 0 8px var(--c); line-height: 1.5; pointer-events: none; max-width: 60%; }
+  #hud { position: absolute; left: 12px; top: 10px; font-family: var(--mono); font-size: 14px; color: var(--c); text-shadow: 0 0 8px var(--c); pointer-events: none; }
   #hud .st { color: var(--warn); }
   .cur { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; border: 2px solid var(--pink); border-radius: 50%; pointer-events: none; box-shadow: 0 0 12px var(--pink); transition: transform .1s; }
   .cur.pinch { border-color: var(--warn); box-shadow: 0 0 14px var(--warn); transform: scale(.6); background: rgba(255, 200, 69, .3); }
-  #info { position: absolute; left: 10px; bottom: 10px; width: min(360px, calc(100% - 20px)); display: none; }
+  #info { position: absolute; left: 10px; bottom: calc(72px + env(safe-area-inset-bottom)); width: min(340px, calc(100% - 20px)); display: none; }
   #info.show { display: block; animation: lab-pop .2s; }
   #info .en { font-family: var(--mono); color: var(--dim); font-size: 13px; letter-spacing: 1px; }
   #info p { margin: 6px 0 0; font-size: 14px; line-height: 1.55; color: #cfe9ef; }
   #info .x { position: absolute; right: 6px; top: 4px; border: 0; padding: 4px 8px; }
-  #controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--panel); }
-  #controls label { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 180px; font-size: 13px; color: var(--dim); }
-  #controls input[type=range] { flex: 1; }
-  #chips { display: flex; gap: 6px; overflow-x: auto; width: 100%; padding-bottom: 2px; scrollbar-width: thin; }
-  #chips .btn { white-space: nowrap; font-size: 12px; padding: 4px 8px; }
-  #help { position: absolute; right: 10px; bottom: 10px; max-width: 300px; font-size: 13px; display: none; }
+  #controls { position: fixed; left: 50%; bottom: calc(12px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 5; display: flex; align-items: center; gap: 6px;
+    padding: 6px 8px; border-radius: 999px; background: rgba(0, 16, 24, .55); border: 1px solid var(--line); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  #controls label { display: flex; align-items: center; gap: 6px; font-size: 16px; color: var(--c); padding: 0 6px; }
+  #controls input[type=range] { width: min(160px, 32vw); }
+  #controls .btn { width: 40px; height: 40px; padding: 0; border-radius: 50%; font-size: 17px; }
+  #help { position: absolute; right: 10px; bottom: calc(72px + env(safe-area-inset-bottom)); max-width: 280px; font-size: 13px; display: none; }
   #help.show { display: block; }
   #help ul { margin: 6px 0 0; padding-left: 18px; line-height: 1.6; }
   #help b { color: var(--warn); }
   .lab-gate a.alt { display: inline-block; margin-top: 14px; color: var(--c); }
   @media (max-width: 700px) {
-    #hud { font-size: 12px; }
     #help { left: 10px; right: 10px; max-width: none; }
     .lbl { font-size: 11px; }
-    #controls { gap: 6px; padding: 6px 10px calc(6px + env(safe-area-inset-bottom)); }
-    #controls label { flex-basis: 100%; }
-    #controls > .btn { flex: 1; padding: 6px 4px; font-size: 14px; }
   }
 </style>
 </head>
@@ -58,23 +54,21 @@
   <div id="hud"></div>
   <div id="info" class="panel"><button class="btn x" id="infoX">✕</button><h2 id="infoTh"></h2><div class="en" id="infoEn"></div><p id="infoTx"></p></div>
   <div id="help" class="panel">
-    <h2>ท่ามือ</h2>
     <ul>
-      <li><b>จีบนิ้ว 1 มือ</b> ค้างแล้วขยับ = หยิบหมุนโมเดล</li>
-      <li><b>จีบนิ้ว 2 มือ</b> แล้วดึงเข้า-ออก = ย่อ/ขยาย</li>
-      <li><b>แบมือ</b> ยิ่งกางนิ้วกว้าง = ยิ่งแยกชิ้นส่วน</li>
-      <li><b>กำมือ</b> = ประกอบกลับ</li>
-      <li><b>ชี้นิ้ว</b> เล็งชิ้นส่วน แล้ว <b>จีบ</b> = เลือกดูข้อมูล</li>
+      <li><b>จีบนิ้ว</b> ค้างแล้วขยับ = หมุน</li>
+      <li><b>จีบ 2 มือ</b> ดึงเข้า-ออก = ย่อ/ขยาย</li>
+      <li><b>แบมือ</b> = แยกชิ้นส่วน · <b>กำมือ</b> = ประกอบ</li>
+      <li><b>ชี้</b> ชิ้นส่วน แล้ว <b>จีบ</b> = ดูข้อมูล</li>
     </ul>
-    <p class="note">ไม่มีกล้อง: ลากเพื่อหมุน · ล้อเมาส์/2 นิ้ว = ซูม · แตะชิ้นส่วน = ดูข้อมูล</p>
+    <p class="note">ไม่ใช้กล้อง: ลากหมุน · 2 นิ้วซูม · แตะชิ้นส่วน</p>
   </div>
 </div>
 <div id="controls">
-  <label>แยกชิ้นส่วน <input type="range" id="explode" min="0" max="1" step="0.01" value="0"></label>
-  <button class="btn" id="btnCam">📷 กล้อง</button>
-  <button class="btn" id="btnReset">⟲ รีเซ็ต</button>
-  <button class="btn" id="btnHelp">? ท่ามือ</button>
-  <div id="chips"></div>
+  <label title="แยกชิ้นส่วน">⇔ <input type="range" id="explode" min="0" max="1" step="0.01" value="0"></label>
+  <button class="btn" id="btnCam" title="ใช้มือคุม (กล้อง)">✋</button>
+  <button class="btn" id="btnReset" title="รีเซ็ต">⟲</button>
+  <button class="btn" id="btnHelp" title="ท่ามือ">?</button>
+  <div id="chips" hidden></div>
 </div>
 <script type="module" src="app.js"></script>
 </body>

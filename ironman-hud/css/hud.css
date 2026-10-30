@@ -736,9 +736,30 @@ html.no-scroll, html.no-scroll body { overflow: hidden; }
 .ov-f { flex: 1; width: 100%; border: 0; background: #01070c; }
 body.ov-open { overflow: hidden; }
 /* แผงระบบจาก LAB (20+) */
-.app-frame { background: #01070c; border: 1px solid rgba(var(--hud-rgb), 0.25); }
-.app-frame iframe { background: #01070c; }
+.app-frame, .app-frame iframe { background: transparent; border: 0; } /* ไร้กรอบ: ระบบลอยบนพื้นหลังของ EDIT */
 .app-card { padding: 16px; font-size: 14px; line-height: 1.6; }
 .app-card p { margin: 0 0 12px; }
 .app-open { display: inline-block; padding: 10px 16px; color: var(--hud); text-decoration: none; }
 .app-frame .ex-full { top: -46px; left: auto; right: 0; width: 36px; height: 36px; font-size: 16px; } /* ปุ่มเต็มจออยู่บนแถบหัวแผง ไม่ทับแอป */
+/* มือถือ: เข้าแผงระบบ = เต็มจอ + แถบนำทางด้านบน (ในกรอบปัดเปลี่ยนแผงไม่ได้) */
+#app-nav { position: fixed; left: 0; right: 0; top: 0; z-index: 70; display: flex; align-items: center; gap: 4px;
+  padding: calc(var(--safe-t) + 4px) 6px 4px; background: rgba(2, 8, 16, 0.82); border-bottom: 1px solid rgba(var(--hud-rgb), 0.25);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+#app-nav[hidden] { display: none; }
+#app-nav > button, #app-nav > a { flex: none; min-width: 40px; height: 40px; display: grid; place-items: center; border-radius: 20px; border: 1px solid rgba(var(--hud-rgb), 0.35);
+  background: rgba(var(--hud-rgb), 0.08); color: var(--hud); font: inherit; font-size: 16px; text-decoration: none; padding: 0 8px; }
+#app-nav .an-step { display: flex; align-items: center; gap: 4px; max-width: 26vw; }
+#app-nav .an-step b { font-size: 22px; line-height: 1; }
+#app-nav .an-step small { font-size: 11px; color: var(--text); opacity: 0.7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#app-nav .an-step:disabled { opacity: 0.3; }
+#app-nav .an-t { flex: 1; min-width: 0; text-align: center; line-height: 1.15; }
+#app-nav .an-t b { display: block; font-family: var(--mono); color: var(--hud); font-weight: 400; font-size: 15px; letter-spacing: 0.08em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#app-nav .an-t small { display: block; font-size: 10.5px; opacity: 0.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.app-mode .top, body.app-mode .foot, body.app-mode .dial { display: none !important; }
+body.app-mode .pnl.appx.on { position: fixed !important; left: 0; right: 0; bottom: 0; top: calc(var(--safe-t) + 50px); z-index: 60; display: block !important;
+  margin: 0; padding: 0 0 var(--safe-b); column-count: auto; animation: none; }
+body.app-mode .pnl.appx.on > .ph { display: none; }
+body.app-mode .pnl.appx.on > .ex-frame { height: 100% !important; min-height: 0; margin: 0; }
+body.app-mode .pnl.appx.on > .app-card { margin: 16px; }
+body.app-mode .pnl.appx.on .ex-full { display: none; }
+@media (max-width: 480px) { #app-nav .an-step small { display: none; } #app-nav .an-step { min-width: 44px; justify-content: center; } }

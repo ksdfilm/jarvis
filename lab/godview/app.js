@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import * as SAT from 'satellite.js';
-import { bar, store, toast, $, proxyURL, viaWorker, isPhone } from '../common/lab.js';
+import { embedded, bar, store, toast, $, proxyURL, viaWorker, isPhone } from '../common/lab.js';
 
 const RAD = Math.PI / 180, RE = 6371;
 const PHONE = isPhone();
@@ -29,7 +29,8 @@ const fmt = (n, d = 0) => n == null || isNaN(n) ? '—' : Number(n).toLocaleStri
 
 // ---------- ฉาก ----------
 const stage = $('#stage');
-const ren = new THREE.WebGLRenderer({ antialias: !PHONE, powerPreference: 'high-performance' });
+const ren = new THREE.WebGLRenderer({ antialias: !PHONE, powerPreference: 'high-performance', alpha: embedded });
+if (embedded) ren.setClearColor(0x000000, 0); // in the EDIT HUD: no black box, the globe floats on the HUD background
 ren.setPixelRatio(Math.min(PHONE ? 1.75 : 2, devicePixelRatio || 1));
 ren.outputColorSpace = THREE.LinearSRGBColorSpace;
 stage.prepend(ren.domElement);

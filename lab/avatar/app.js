@@ -1,15 +1,15 @@
 // AVATAR//MIRROR — code-built robot driven by FaceLandmarker blendshapes (+ optional PoseLandmarker arms)
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { bar, gate, toast, permMsg, camera, vision, MODELS, clamp, lerp, $ } from '../common/lab.js';
+import { embedded, bar, gate, toast, permMsg, camera, vision, MODELS, clamp, lerp, $ } from '../common/lab.js';
 
 bar('AVATAR//MIRROR', 'หุ่นยนต์สะท้อนท่าทาง · หน้า ตา ปาก แขน');
 const view = $('#view'), hud = $('#hud');
 
 // ---------- scene ----------
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: embedded }); // in the EDIT HUD: transparent, floats on the HUD background
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
-renderer.setClearColor(0x01070c);
+renderer.setClearColor(0x01070c, embedded ? 0 : 1);
 view.prepend(renderer.domElement);
 const scene = new THREE.Scene();
 const cam = new THREE.PerspectiveCamera(35, 1, 0.1, 100);

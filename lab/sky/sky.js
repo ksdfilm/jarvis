@@ -647,7 +647,7 @@ await gate({
     'ถ้าไม่อนุญาตหรือเปิดบนคอม → ใช้โหมด “ลากดูเอง” ได้ (ลากเมาส์ · หมุนล้อซูม)',
     'แตะชื่อดาวเพื่อดูรายละเอียด · ปุ่ม 🔍 ค้นหา จะมีลูกศรชี้ทางไปหา',
   ],
-  needs: touchy ? ['camera'] : [],
+  needs: touchy ? ['camera', 'orientation'] : [], // orientation → always via the tap (iOS)
   button: touchy ? '▶ เปิดกล้องส่องฟ้า' : '▶ เริ่ม (โหมดลากดูเอง)',
   async onStart() {
     if (touchy) {

@@ -1,7 +1,7 @@
 // AIR//DRAW — draw glowing neon tubes in 3D with your fingertips
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { bar, gate, toast, permMsg, clamp, $, $$, store } from '../common/lab.js';
+import { embedded, bar, gate, toast, permMsg, clamp, $, $$, store } from '../common/lab.js';
 import { handTracker, pip, PIP_CSS, OneEuroPt, OneEuro, GESTURE_TH } from './hand.js';
 
 bar('AIR//DRAW', 'วาดกลางอากาศ 3D · เส้นแสงนีออน');
@@ -13,9 +13,9 @@ let color = store.get('airdraw.color', COLORS[0]);
 let radius = +$('#thick').value;
 
 // ---------- three ----------
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: embedded }); // in the EDIT HUD: transparent, floats on the HUD background
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
-renderer.setClearColor(0x01070c);
+renderer.setClearColor(0x01070c, embedded ? 0 : 1);
 view.prepend(renderer.domElement);
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0x01070c, 12, 30);

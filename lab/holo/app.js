@@ -1,7 +1,7 @@
 // HOLO//HAND — hand-controlled hologram of a code-built turbofan engine
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { bar, gate, toast, permMsg, clamp, lerp, $ } from '../common/lab.js';
+import { embedded, bar, gate, toast, permMsg, clamp, lerp, $ } from '../common/lab.js';
 import { handTracker, pip, PIP_CSS, GESTURE_TH } from './hand.js';
 
 bar('HOLO//HAND', 'โฮโลแกรมคุมด้วยมือ · เครื่องยนต์ไอพ่น');
@@ -11,9 +11,9 @@ const view = $('#view'), labelsEl = $('#labels'), hud = $('#hud');
 const CYAN = new THREE.Color(0x3ce7ff), GOLD = new THREE.Color(0xffc845), PINK = new THREE.Color(0xff7ad9);
 
 // ---------- renderer / scene ----------
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: embedded }); // in the EDIT HUD: transparent, floats on the HUD background
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
-renderer.setClearColor(0x01070c);
+renderer.setClearColor(0x01070c, embedded ? 0 : 1);
 view.prepend(renderer.domElement);
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0x01070c, 14, 40);
@@ -231,16 +231,15 @@ async function startCamera() {
   const t = handTracker({ numHands: 2 });
   try { await t.start(); } catch (e) { t.stop(); hud.innerHTML = ''; throw e; }
   tracker = t;
-  pipView = pip(view, t);
-  $('#btnCam').classList.add('on'); $('#btnCam').textContent = '📷 ปิดกล้อง';
-  toast('ยกมือให้กล้องเห็น — กด "? ท่ามือ" เพื่อดูวิธีควบคุม', 4000);
+  // ไม่แสดงภาพกล้อง — ใช้กล้องแค่จับท่ามือ หน้าจอมีแต่โฮโลแกรม
+  $('#btnCam').classList.add('on');
 }
 function stopCamera() {
   tracker?.stop(); tracker = null;
   pipView?.box.remove(); pipView = null;
   Object.values(cursors).forEach(c => c.remove());
   for (const k in cursors) delete cursors[k];
-  $('#btnCam').classList.remove('on'); $('#btnCam').textContent = '📷 กล้อง';
+  $('#btnCam').classList.remove('on');
 }
 $('#btnCam').onclick = async () => {
   if (tracker) return stopCamera();
@@ -355,23 +354,20 @@ function loop(now) {
     p.lbl.classList.toggle('sel', p === selected);
   }
   const n = hands ? hands.length : tracker?.hands.length;
-  hud.innerHTML = tracker
-    ? `มือ ${n ?? 0}${tracker.hands.length ? ' · ' + tracker.hands.map(h => GESTURE_TH[h.gesture]).join(' + ') : ''}<br><span class="st">${action || (n ? '' : 'ยกมือให้กล้องเห็น')}</span>`
-    : `โหมดเมาส์/สัมผัส<br><span class="st">ลากหมุน · ซูม · แตะชิ้นส่วน</span>`;
+  // ข้อความน้อยที่สุด: แค่สถานะมือ + ท่าที่กำลังทำ
+  hud.innerHTML = tracker ? `✋${n ?? 0}${action ? ` <span class="st">${action}</span>` : ''}` : '';
 }
 requestAnimationFrame(loop);
 
 // ---------- start gate ----------
 gate({
-  title: 'HOLO//HAND',
+  title: 'HOLO',
   lines: [
-    'โฮโลแกรมเครื่องยนต์ไอพ่น 12 ชิ้นส่วน ควบคุมด้วยท่ามือผ่านกล้อง',
-    '<b>จีบนิ้ว</b> หมุน · <b>จีบ 2 มือ</b> ย่อ/ขยาย · <b>แบมือ</b> แยกชิ้นส่วน · <b>กำมือ</b> ประกอบกลับ · <b>ชี้+จีบ</b> เลือกชิ้นส่วน',
-    'ภาพจากกล้องประมวลผลในเครื่องนี้ ไม่มีการอัปโหลด',
-    '<a href="#" class="alt" id="noCam">หรือใช้แบบไม่เปิดกล้อง (เมาส์/นิ้วแตะ) ▸</a>',
+    'คุมโฮโลแกรมด้วยมือ — กล้องใช้จับท่ามือเท่านั้น ไม่แสดงภาพ ไม่อัปโหลด',
+    '<a href="#" class="alt" id="noCam">ใช้นิ้วแตะแทน ▸</a>',
   ],
   needs: ['camera'],
-  button: '▶ เปิดกล้องและเริ่ม',
+  button: '▶ เริ่ม',
   onStart: startCamera,
 }).catch(() => {});
 $('#noCam').onclick = e => { e.preventDefault(); $('.lab-gate')?.remove(); };

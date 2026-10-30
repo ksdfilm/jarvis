@@ -842,7 +842,10 @@ $('#moon').textContent = moonPhase(Date.now());
 renderApps();
 for (const m of [fx, menu, settings, standby, report, lock, boot, weatherx]) m.init(ctx);
 for (const m of PANEL_MODS) { try { m.init?.(ctx); } catch (e) { console.error(m.id, e); } }
-go(0);
+// #p-x-sonar ในลิงก์ (ปุ่ม "◂ EDIT" จากหน้าระบบที่เปิดเต็มหน้า) → เปิดแผงนั้นเลย
+const startPanel = PANELS.findIndex((p) => `#${p.id}` === location.hash);
+go(Math.max(0, startPanel));
+if (startPanel > 0 && DESKTOP.matches) setTimeout(() => go(startPanel), 600); // คอม: รอผังหน้าเสร็จก่อนเลื่อนไปหา
 renderDial();
 requestAnimationFrame(frame);
 renderWeather();
