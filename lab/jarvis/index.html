@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#01070c">
+<title>JARVIS AI ในเครื่อง · KSD LAB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../common/lab.css">
+<style>
+  body { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+  .chip { font-family: var(--mono); font-size: 12px; border: 1px solid var(--line); padding: 5px 9px; color: var(--dim); cursor: pointer; background: transparent; white-space: nowrap; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; }
+  .chip.ready { color: var(--ok); border-color: rgba(61, 255, 154, .4); }
+  .wrap { flex: 1; min-height: 0; width: 100%; max-width: 920px; margin: 0 auto; display: flex; flex-direction: column; padding: 0 12px; }
+  #log { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 2px; display: flex; flex-direction: column; gap: 12px; -webkit-overflow-scrolling: touch; }
+  .msg { max-width: 88%; padding: 10px 13px; line-height: 1.6; font-size: 15.5px; white-space: normal; overflow-wrap: anywhere; }
+  .msg.user { align-self: flex-end; background: rgba(60, 231, 255, .12); border: 1px solid rgba(60, 231, 255, .35); }
+  .msg.bot { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--c); }
+  .msg.bot .who { font-family: var(--mono); font-size: 11px; color: var(--c); letter-spacing: 2px; margin-bottom: 2px; display: flex; gap: 8px; align-items: center; }
+  .msg.bot .who span { color: var(--dim); letter-spacing: 0; }
+  .msg.sys { align-self: center; color: var(--dim); font-size: 13px; text-align: center; max-width: 100%; }
+  .msg pre { background: #000; border: 1px solid var(--line); padding: 8px; overflow-x: auto; font-size: 13px; white-space: pre; }
+  .msg code { font-family: ui-monospace, Consolas, monospace; color: var(--c2); }
+  .msg p { margin: 0 0 6px; } .msg p:last-child { margin: 0; }
+  .msg ul, .msg ol { margin: 4px 0; padding-left: 20px; }
+  .cursor::after { content: "▍"; color: var(--c); animation: lab-blink .8s infinite; }
+  .composer { display: flex; gap: 6px; align-items: flex-end; padding: 10px 0 12px; border-top: 1px solid var(--line); }
+  .composer textarea { flex: 1; resize: none; min-height: 46px; max-height: 160px; font-size: 16px; line-height: 1.45; padding: 11px 12px; }
+  .composer .btn { min-width: 46px; height: 46px; font-size: 18px; padding: 0 12px; }
+  .btn.rec { color: var(--bad); border-color: var(--bad); animation: lab-blink 1s infinite; }
+  .tools { display: flex; gap: 6px; flex-wrap: wrap; padding-top: 8px; font-size: 13px; }
+  .tools .btn { padding: 5px 10px; font-size: 13px; }
+  /* model picker */
+  .picker { margin: 12px 0; flex: 0 1 auto; min-height: 0; overflow-y: auto; }
+  .picker h2 { display: flex; align-items: center; gap: 10px; }
+  .models { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-top: 10px; }
+  .model { position: relative; text-align: left; background: rgba(0, 0, 0, .35); border: 1px solid var(--line); padding: 10px 11px; cursor: pointer; color: inherit; font: inherit; }
+  .model:hover, .model.sel { border-color: var(--c); box-shadow: 0 0 14px rgba(60, 231, 255, .2) inset; }
+  .model b { color: var(--c2); display: block; font-size: 15px; }
+  .model .meta { font-family: var(--mono); font-size: 12px; color: var(--c); margin: 3px 0; }
+  .model .d { font-size: 12.5px; color: var(--dim); line-height: 1.45; }
+  .badge { display: inline-block; font-size: 11px; padding: 0 6px; border: 1px solid; margin: 4px 4px 0 0; }
+  .badge.rec { color: var(--ok); } .badge.warn { color: var(--warn); } .badge.cached { color: var(--c); }
+  .prog { height: 6px; background: rgba(60, 231, 255, .12); margin-top: 10px; overflow: hidden; }
+  .prog i { display: block; height: 100%; width: 0; background: var(--c); box-shadow: 0 0 8px var(--c); transition: width .3s; }
+  .ptext { font-family: var(--mono); font-size: 12px; color: var(--dim); margin-top: 6px; min-height: 1.2em; overflow-wrap: anywhere; }
+  .warnbox { border: 1px solid rgba(255, 77, 109, .5); background: rgba(255, 77, 109, .08); padding: 10px 12px; margin-top: 10px; line-height: 1.6; font-size: 14px; }
+  .warnbox b { color: var(--bad); }
+  .reactor { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--c); box-shadow: 0 0 12px var(--c), inset 0 0 8px var(--c); position: relative; flex: none; }
+  .reactor::after { content: ""; position: absolute; inset: 5px; border-radius: 50%; border: 2px dashed var(--c2); }
+  .busy .reactor::after { animation: spin 1.2s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
+  @media (max-width: 700px) { .msg { max-width: 94%; font-size: 15px; } .models { grid-template-columns: 1fr 1fr; } .model .d { font-size: 12px; } }
+</style>
+</head>
+<body class="scanlines">
+<div class="wrap">
+  <section class="panel picker" id="picker">
+    <h2><span class="reactor"></span>เลือกสมองของ JARVIS</h2>
+    <p class="sub">โมเดลภาษาจะถูกดาวน์โหลดครั้งแรกครั้งเดียว แล้วเก็บไว้ในเบราว์เซอร์ (ครั้งต่อไปเปิดได้แม้ออฟไลน์) · ทุกคำถามประมวลผลบนการ์ดจอของเครื่องนี้ ไม่ส่งข้อมูลออก</p>
+    <div id="gpuInfo"></div>
+    <div class="models" id="models"></div>
+    <div class="row">
+      <button class="btn primary big" id="loadBtn" disabled>⚡ โหลดโมเดล</button>
+      <button class="btn" id="delBtn" hidden>🗑 ลบโมเดลนี้ออกจากเครื่อง</button>
+      <button class="btn" id="closePicker" hidden>✕ ปิด</button>
+    </div>
+    <div class="prog"><i id="pbar"></i></div>
+    <div class="ptext" id="ptext"></div>
+  </section>
+  <div id="log"></div>
+  <div class="composer">
+    <button class="btn" id="mic" title="พูด" hidden>🎤</button>
+    <textarea id="input" rows="1" placeholder="พิมพ์คำถามถึง JARVIS…" disabled></textarea>
+    <button class="btn primary" id="send" disabled>➤</button>
+    <button class="btn" id="stop" hidden title="หยุด">■</button>
+  </div>
+  <div class="tools" style="padding-bottom:10px">
+    <button class="btn" id="voiceOut">🔇 อ่านคำตอบออกเสียง: ปิด</button>
+    <button class="btn" id="clear">🧹 ล้างแชท</button>
+    <span class="note" id="stats" style="margin-left:auto;align-self:center"></span>
+  </div>
+</div>
+
+<script type="module">
+import { bar, store, toast, $, $$, isIOS, isPhone } from '../common/lab.js';
+
+const WEBLLM = 'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.79/+esm';
+const hdr = bar('JARVIS', 'AI ในเครื่อง · WebGPU', '<button class="chip" id="chip">ยังไม่โหลดโมเดล</button>');
+const mobile = isIOS() || isPhone();
+
+// measured download sizes (sum of weight shards on huggingface.co/mlc-ai)
+const MODELS = [
+  { base: 'Qwen2.5-0.5B-Instruct', name: 'Qwen2.5 0.5B', mb: 278, th: 'เล็ก เร็ว ภาษาไทยพื้นฐาน (อาจตอบเพี้ยนบ้าง)', phone: true },
+  { base: 'Llama-3.2-1B-Instruct', name: 'Llama 3.2 1B', mb: 695, th: 'อังกฤษดี ภาษาไทยอ่อน' },
+  { base: 'Qwen2.5-1.5B-Instruct', name: 'Qwen2.5 1.5B', mb: 869, th: 'ภาษาไทยดีขึ้นชัดเจน', pc: true },
+  { base: 'Qwen2.5-3B-Instruct', name: 'Qwen2.5 3B', mb: 1736, th: 'ฉลาดสุดในชุดนี้ ต้องการการ์ดจอแรง', big: true },
+];
+
+let webllm, engine = null, loadedId = '', f16 = false, gpuOK = false, selected = null;
+const history = store.get('jarvis.chat', []);
+const log = $('#log');
+
+// ---------- WebGPU check ----------
+async function checkGPU() {
+  const info = $('#gpuInfo');
+  if (!navigator.gpu) {
+    info.innerHTML = `<div class="warnbox"><b>เบราว์เซอร์นี้ไม่มี WebGPU</b> — JARVIS ต้องใช้ WebGPU เพื่อรันโมเดลบนการ์ดจอ<br>
+      • iPhone: ต้องเป็น iOS 26 ขึ้นไป (Safari เปิด WebGPU ให้แล้ว) — iOS 18 ลองเปิดที่ การตั้งค่า › แอป › Safari › ขั้นสูง › Feature Flags › WebGPU<br>
+      • คอม: ใช้ Edge/Chrome เวอร์ชันล่าสุด${isSecureContext ? '' : '<br>• หน้านี้ต้องเปิดผ่าน https หรือ localhost'}</div>`;
+    return false;
+  }
+  try {
+    const ad = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
+    if (!ad) throw new Error('no adapter');
+    f16 = ad.features.has('shader-f16');
+    const lim = ad.limits.maxBufferSize / 2 ** 20;
+    const vendor = ad.info?.vendor || ad.info?.description || '';
+    info.innerHTML = `<p class="note mono">WebGPU ✓ ${vendor} · shader-f16: ${f16 ? 'มี' : 'ไม่มี (ใช้รุ่น f32)'} · max buffer ${Math.round(lim)} MB</p>`;
+    return true;
+  } catch (e) {
+    info.innerHTML = `<div class="warnbox"><b>ใช้ WebGPU ไม่ได้</b> — เบราว์เซอร์มี WebGPU แต่หาการ์ดจอที่รองรับไม่เจอ (ไดรเวอร์เก่า/ถูกปิด) ลองอัปเดตเบราว์เซอร์หรือไดรเวอร์การ์ดจอ</div>`;
+    return false;
+  }
+}
+
+// ---------- model list ----------
+const idOf = m => `${m.base}-${f16 ? 'q4f16_1' : 'q4f32_1'}-MLC`;
+async function renderModels() {
+  const cfg = webllm?.prebuiltAppConfig?.model_list || [];
+  const lastId = store.get('jarvis.model', null);
+  const rows = await Promise.all(MODELS.map(async m => {
+    const id = idOf(m), rec = cfg.find(r => r.model_id === id);
+    let cached = false;
+    try { cached = webllm ? await webllm.hasModelInCache(id) : false; } catch {}
+    return { m, id, ok: !!rec, vram: rec?.vram_required_MB, cached };
+  }));
+  const avail = rows.filter(r => r.ok);
+  $('#models').innerHTML = avail.map(({ m, id, vram, cached }) => `
+    <button class="model" data-id="${id}">
+      <b>${m.name}</b>
+      <div class="meta">ดาวน์โหลด ~${m.mb >= 1000 ? (m.mb / 1000).toFixed(1) + ' GB' : m.mb + ' MB'} · VRAM ~${(vram / 1024).toFixed(1)} GB</div>
+      <div class="d">${m.th}</div>
+      ${m.phone ? '<span class="badge rec">แนะนำ iPhone</span>' : ''}${m.pc ? '<span class="badge rec">แนะนำ PC</span>' : ''}
+      ${mobile && !m.phone ? '<span class="badge warn">ใหญ่ไปสำหรับมือถือ</span>' : ''}${cached ? '<span class="badge cached">✓ อยู่ในเครื่องแล้ว</span>' : ''}
+    </button>`).join('');
+  if (!avail.length) $('#models').innerHTML = '<p class="note">โหลดรายชื่อโมเดลไม่ได้</p>';
+  const def = avail.find(r => r.id === lastId) || avail.find(r => r.cached) || avail.find(r => mobile ? r.m.phone : r.m.pc) || avail[0];
+  if (def) select(def.id, def.cached);
+  $$('.model').forEach(b => b.onclick = () => select(b.dataset.id, rows.find(r => r.id === b.dataset.id)?.cached));
+  return avail;
+}
+function select(id, cached) {
+  selected = id;
+  $$('.model').forEach(b => b.classList.toggle('sel', b.dataset.id === id));
+  $('#loadBtn').disabled = !gpuOK;
+  $('#loadBtn').textContent = !gpuOK ? '✕ ต้องมี WebGPU' : id === loadedId ? '✓ กำลังใช้งานอยู่' : cached ? '⚡ เปิดโมเดล (อยู่ในเครื่องแล้ว)' : '⚡ ดาวน์โหลด + เปิดโมเดล';
+  $('#delBtn').hidden = !cached;
+}
+
+// ---------- load engine ----------
+function thProgress(t) {
+  return t.replace(/Fetching param cache\[(\d+)\/(\d+)\]: (\d+)MB fetched\. (\d+)% completed, (\d+) secs elapsed\./, 'ดาวน์โหลดน้ำหนักโมเดล [$1/$2] $3 MB · $4% · $5 วิ')
+    .replace(/Loading model from cache\[(\d+)\/(\d+)\]: (\d+)MB loaded\. (\d+)% completed, (\d+) secs elapsed\./, 'โหลดจากแคชในเครื่อง [$1/$2] $3 MB · $4% · $5 วิ')
+    .replace(/Start to fetch params/, 'เริ่มดาวน์โหลด…').replace(/Loading GPU shader modules\[(\d+)\/(\d+)\]/, 'คอมไพล์ shader บนการ์ดจอ [$1/$2]')
+    .replace(/Finish loading on WebGPU - .*/, 'พร้อมใช้งาน');
+}
+$('#loadBtn').onclick = async () => {
+  if (!selected || selected === loadedId) return;
+  const m = MODELS.find(x => selected.startsWith(x.base));
+  if (mobile && !m.phone && !confirm(`${m.name} ใหญ่สำหรับมือถือ อาจทำให้ Safari รีโหลดหน้าเพราะหน่วยความจำไม่พอ\nยังต้องการโหลดไหม?`)) return;
+  $('#loadBtn').disabled = true; $$('.model').forEach(b => b.disabled = true);
+  hdr.classList.add('busy'); $('.picker').classList.add('busy');
+  $('#ptext').textContent = 'กำลังเตรียม…';
+  try {
+    if (engine) { await engine.unload(); }
+    const opts = { initProgressCallback: r => { $('#pbar').style.width = Math.round(r.progress * 100) + '%'; $('#ptext').textContent = thProgress(r.text); } };
+    try {
+      engine ??= await webllm.CreateWebWorkerMLCEngine(new Worker(new URL('./worker.js', import.meta.url), { type: 'module' }), selected, opts);
+      if (engine.modelId?.[0] !== selected && loadedId) await engine.reload(selected);
+    } catch (e) {
+      if (/f16|shader-f16|WebGPU|GPU|memory|Device/i.test(String(e))) throw e;
+      console.warn('worker engine failed, falling back to main thread', e);
+      engine = await webllm.CreateMLCEngine(selected, opts);
+    }
+    loadedId = selected; store.set('jarvis.model', selected);
+    navigator.storage?.persist?.();
+    $('#pbar').style.width = '100%';
+    ready();
+  } catch (e) {
+    console.error(e);
+    engine = null;
+    const s = String(e?.message || e);
+    $('#ptext').innerHTML = `<span style="color:var(--bad)">โหลดไม่สำเร็จ: ${esc(s.slice(0, 220))}</span><br>${/memory|OOM|allocate|Device was lost|lost/i.test(s) ? 'หน่วยความจำการ์ดจอไม่พอ — ลองโมเดลที่เล็กกว่า' : /fetch|network|Failed to fetch/i.test(s) ? 'เครือข่ายขัดข้อง — ลองใหม่ (ส่วนที่โหลดแล้วจะไม่ต้องโหลดซ้ำ)' : ''}`;
+  } finally {
+    hdr.classList.remove('busy'); $('.picker').classList.remove('busy');
+    $$('.model').forEach(b => b.disabled = false);
+    renderModels();
+  }
+};
+$('#delBtn').onclick = async () => {
+  if (!confirm('ลบไฟล์โมเดลนี้ออกจากเครื่อง? (ครั้งหน้าต้องดาวน์โหลดใหม่)')) return;
+  if (selected === loadedId && engine) { await engine.unload(); engine = null; loadedId = ''; notReady(); }
+  await webllm.deleteModelAllInfoInCache(selected);
+  toast('ลบแล้ว'); renderModels();
+};
+function ready() {
+  const m = MODELS.find(x => loadedId.startsWith(x.base));
+  $('#chip').textContent = '● ' + m.name; $('#chip').classList.add('ready');
+  $('#input').disabled = $('#send').disabled = false;
+  $('#picker').hidden = true; $('#closePicker').hidden = false;
+  if (!history.length) addMsg('bot', `ระบบออนไลน์แล้วครับท่าน ผม JARVIS กำลังทำงานบน ${m.name} ในเครื่องของท่านโดยตรง มีอะไรให้ช่วยครับ?`, false);
+  $('#input').focus();
+}
+function notReady() { $('#chip').textContent = 'ยังไม่โหลดโมเดล'; $('#chip').classList.remove('ready'); $('#input').disabled = $('#send').disabled = true; }
+$('#chip').onclick = () => { $('#picker').hidden = !$('#picker').hidden; };
+$('#closePicker').onclick = () => $('#picker').hidden = true;
+
+// ---------- chat rendering ----------
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+function md(s) {
+  const blocks = s.split(/```/);
+  return blocks.map((b, i) => {
+    if (i % 2) return `<pre><code>${esc(b.replace(/^[\w+-]*\n/, ''))}</code></pre>`;
+    return esc(b).split(/\n{2,}/).map(p => {
+      p = p.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`([^`]+)`/g, '<code>$1</code>');
+      if (/^\s*([-*•]|\d+\.)\s/m.test(p) && p.split('\n').every(l => /^\s*([-*•]|\d+\.)\s/.test(l) || !l.trim())) {
+        return '<ul>' + p.split('\n').filter(l => l.trim()).map(l => `<li>${l.replace(/^\s*([-*•]|\d+\.)\s/, '')}</li>`).join('') + '</ul>';
+      }
+      return `<p>${p.replace(/\n/g, '<br>')}</p>`;
+    }).join('');
+  }).join('');
+}
+function addMsg(role, text, save = true) {
+  const el = document.createElement('div');
+  el.className = 'msg ' + (role === 'user' ? 'user' : role === 'sys' ? 'sys' : 'bot');
+  if (role === 'bot') el.innerHTML = `<div class="who">JARVIS <span></span></div><div class="body"></div>`;
+  const body = role === 'bot' ? el.querySelector('.body') : el;
+  if (role === 'user' || role === 'sys') body.textContent = text; else body.innerHTML = md(text);
+  log.appendChild(el); log.scrollTop = log.scrollHeight;
+  if (save && role !== 'sys') { history.push({ role: role === 'bot' ? 'assistant' : 'user', content: text }); persist(); }
+  return el;
+}
+const persist = () => store.set('jarvis.chat', history.slice(-60));
+for (const h of history) addMsg(h.role === 'assistant' ? 'bot' : 'user', h.content, false);
+
+// ---------- persona ----------
+function systemPrompt() {
+  const now = new Date().toLocaleString('th-TH', { dateStyle: 'full', timeStyle: 'short' });
+  // instructions in English (small models follow them more reliably), replies in Thai
+  return `You are JARVIS, the witty, calm and highly capable AI assistant from Iron Man, running fully offline inside "KSD LAB" on the user's own device.
+Rules:
+- Always reply in natural, polite Thai (unless the user writes in another language). Address the user as "ท่าน" and speak as a male assistant, ending sentences with "ครับ".
+- Be concise and helpful: at most 5 short sentences or a short bullet list, unless asked for detail.
+- If you are not sure, say so honestly. Never invent facts. You have no internet access.
+- Current date/time: ${now}`;
+}
+function contextMessages() {
+  // small models have 4k context and Thai is token-hungry: keep the recent turns only
+  const out = []; let chars = 0;
+  for (let i = history.length - 1; i >= 0 && out.length < 10; i--) {
+    chars += history[i].content.length; if (chars > 3500 && out.length) break;
+    out.unshift(history[i]);
+  }
+  while (out.length && out[0].role !== 'user') out.shift();
+  return [{ role: 'system', content: systemPrompt() }, ...out];
+}
+
+// ---------- send / stream ----------
+let generating = false;
+async function send() {
+  const text = $('#input').value.trim();
+  if (!text || generating || !engine) return;
+  $('#input').value = ''; autosize();
+  addMsg('user', text);
+  const el = addMsg('bot', '', false), body = el.querySelector('.body');
+  body.classList.add('cursor');
+  generating = true; $('#send').hidden = true; $('#stop').hidden = false; hdr.classList.add('busy');
+  speakReset();
+  let reply = '', usage = null; const t0 = performance.now();
+  try {
+    const stream = await engine.chat.completions.create({
+      messages: contextMessages(), stream: true, stream_options: { include_usage: true },
+      temperature: 0.5, top_p: 0.9, max_tokens: 700, frequency_penalty: 0.2,
+    });
+    for await (const ch of stream) {
+      const d = ch.choices?.[0]?.delta?.content || '';
+      if (d) { reply += d; body.innerHTML = md(reply); log.scrollTop = log.scrollHeight; speakFeed(reply); }
+      if (ch.usage) usage = ch.usage;
+    }
+  } catch (e) {
+    console.error(e);
+    reply += (reply ? '\n\n' : '') + '⚠ ' + (/lost|Device/i.test(String(e)) ? 'การ์ดจอหยุดทำงาน (หน่วยความจำไม่พอ?) — โหลดโมเดลใหม่หรือเลือกรุ่นเล็กกว่า' : 'เกิดข้อผิดพลาด: ' + (e.message || e));
+    body.innerHTML = md(reply);
+  } finally {
+    body.classList.remove('cursor');
+    generating = false; $('#send').hidden = false; $('#stop').hidden = true; hdr.classList.remove('busy');
+    if (!reply.trim()) { reply = '(หยุดก่อนตอบ)'; body.textContent = reply; }
+    history.push({ role: 'assistant', content: reply }); persist();
+    speakFeed(reply, true);
+    const sec = (performance.now() - t0) / 1000;
+    const tps = usage?.extra?.decode_tokens_per_s;
+    const st = `${usage?.completion_tokens ?? '?'} tokens · ${tps ? tps.toFixed(1) + ' tok/s' : sec.toFixed(1) + ' วิ'}`;
+    el.querySelector('.who span').textContent = st; $('#stats').textContent = st;
+  }
+}
+$('#send').onclick = send;
+$('#stop').onclick = () => { engine?.interruptGenerate(); speechSynthesis?.cancel(); };
+$('#input').onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } };
+const autosize = () => { const t = $('#input'); t.style.height = 'auto'; t.style.height = Math.min(160, t.scrollHeight + 2) + 'px'; };
+$('#input').oninput = autosize;
+$('#clear').onclick = () => { if (generating) return; history.length = 0; persist(); log.innerHTML = ''; addMsg('sys', 'ล้างประวัติแชทแล้ว', false); };
+
+// ---------- spoken replies (Thai speechSynthesis) ----------
+let voiceOn = store.get('jarvis.voice', false), spoken = 0, thVoice = null;
+const synth = window.speechSynthesis;
+const pickVoice = () => { const v = synth?.getVoices() || []; thVoice = v.find(x => /th[-_]TH/i.test(x.lang) && /Premium|Enhanced|Google|Online|Natural/i.test(x.name)) || v.find(x => /^th/i.test(x.lang)) || null; };
+if (synth) { pickVoice(); synth.onvoiceschanged = pickVoice; }
+function voiceBtn() { $('#voiceOut').textContent = voiceOn ? '🔊 อ่านคำตอบออกเสียง: เปิด' : '🔇 อ่านคำตอบออกเสียง: ปิด'; $('#voiceOut').classList.toggle('on', voiceOn); }
+voiceBtn();
+$('#voiceOut').onclick = () => {
+  if (!synth) return toast('เบราว์เซอร์นี้อ่านออกเสียงไม่ได้');
+  voiceOn = !voiceOn; store.set('jarvis.voice', voiceOn); voiceBtn();
+  if (voiceOn) {
+    pickVoice();
+    synth.speak(Object.assign(new SpeechSynthesisUtterance(' '), { lang: 'th-TH' }));   // iOS: unlock audio inside the tap
+    if (!thVoice) toast('ไม่พบเสียงภาษาไทยในเครื่อง จะใช้เสียงเริ่มต้นแทน', 4000);
+  } else synth.cancel();
+};
+function speakReset() { spoken = 0; synth?.cancel(); }
+function speakFeed(full, final = false) {
+  if (!voiceOn || !synth) return;
+  const rest = full.slice(spoken);
+  // speak finished sentences while the reply is still streaming
+  let cut = -1;
+  const m = [...rest.matchAll(/[.!?。]\s|\n|ครับ\s|ค่ะ\s/g)].pop();
+  if (m) cut = m.index + m[0].length;
+  else if (rest.length > 140) { const sp = rest.lastIndexOf(' '); if (sp > 60) cut = sp + 1; }
+  if (final) cut = rest.length;
+  if (cut <= 0) return;
+  const chunk = rest.slice(0, cut).replace(/```[\s\S]*?```/g, ' ').replace(/[*`#>_]/g, '').trim();
+  spoken += cut;
+  if (!chunk) return;
+  const u = new SpeechSynthesisUtterance(chunk);
+  u.lang = 'th-TH'; if (thVoice) u.voice = thVoice; u.rate = 1.05; u.pitch = .9;
+  synth.speak(u);
+}
+
+// ---------- voice input (webkitSpeechRecognition th-TH) ----------
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (SR) {
+  $('#mic').hidden = false;
+  let rec = null;
+  $('#mic').onclick = () => {
+    if (rec) { rec.stop(); return; }
+    rec = new SR(); rec.lang = 'th-TH'; rec.interimResults = true; rec.continuous = false;
+    const before = $('#input').value; let finalText = '';
+    rec.onresult = e => {
+      let interim = ''; finalText = '';
+      for (const r of e.results) (r.isFinal ? (finalText += r[0].transcript) : (interim += r[0].transcript));
+      $('#input').value = (before ? before + ' ' : '') + finalText + interim; autosize();
+    };
+    rec.onerror = e => toast(e.error === 'not-allowed' ? 'ไม่ได้รับอนุญาตใช้ไมค์' : e.error === 'no-speech' ? 'ไม่ได้ยินเสียง ลองใหม่' : 'รู้จำเสียงผิดพลาด: ' + e.error);
+    rec.onend = () => { $('#mic').classList.remove('rec'); rec = null; if (finalText.trim() && engine && !generating) send(); };
+    synth?.cancel();
+    rec.start(); $('#mic').classList.add('rec');
+  };
+}
+
+// ---------- boot ----------
+gpuOK = await checkGPU();
+try {
+  $('#ptext').textContent = 'กำลังโหลดไลบรารี WebLLM…';
+  webllm = await import(WEBLLM);
+  $('#ptext').textContent = gpuOK ? 'เลือกโมเดลแล้วกดโหลด' : 'ดูรายชื่อโมเดลได้ แต่ต้องมี WebGPU จึงจะรันได้';
+} catch (e) { $('#ptext').textContent = 'โหลด WebLLM ไม่ได้ (ออฟไลน์?): ' + e.message; }
+await renderModels();
+if (!history.length) addMsg('sys', 'JARVIS พร้อมเมื่อโหลดโมเดลเสร็จ · ประวัติแชทเก็บในเครื่องนี้เท่านั้น', false);
+window.jarvis = { get engine() { return engine; }, get loadedId() { return loadedId; }, get generating() { return generating; }, gpuOK: () => gpuOK, send };
+</script>
+</body>
+</html>

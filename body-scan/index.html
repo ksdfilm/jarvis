@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#01070c">
+<title>BODY//SCAN</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand"><b>BODY//SCAN</b><small>AI ประมวลผลในเครื่อง · ไม่ส่งภาพออกไปไหน</small></div>
+  <nav id="modes"></nav>
+</header>
+
+<main>
+  <section class="stage-wrap">
+    <div id="stage">
+      <video id="video" playsinline muted></video>
+      <canvas id="fx"></canvas>
+      <div id="hud-top"><span id="hudMode">--</span><span id="hudFps"></span></div>
+      <div id="guide"></div>
+      <div id="count"></div>
+    </div>
+    <div class="cam-bar">
+      <button class="btn" id="btnFlip">⟲ สลับกล้อง</button>
+      <span id="camInfo"></span>
+    </div>
+  </section>
+  <section id="panel"></section>
+</main>
+
+<div id="start">
+  <div class="start-box">
+    <h1>BODY//SCAN</h1>
+    <p class="lead">สแกนท่าทาง · องศาข้อต่อ · ใบหน้า · ชีพจร/การหายใจ ด้วยกล้อง</p>
+    <ul>
+      <li>ใช้ <b>คัดกรองเบื้องต้น</b> เท่านั้น ไม่ใช่เครื่องมือแพทย์ และไม่ใช้แทนการตรวจโดยแพทย์</li>
+      <li>ภาพจากกล้องประมวลผลในเครื่องนี้ ไม่มีการอัปโหลด</li>
+      <li>หากมีอาการหน้าเบี้ยว แขนขาอ่อนแรง หรือพูดไม่ชัดแบบเฉียบพลัน ให้โทร <b>1669</b> ทันที</li>
+    </ul>
+    <button class="btn primary big" id="btnStart">▶ เปิดกล้องและเริ่มสแกน</button>
+    <p id="startErr"></p>
+  </div>
+</div>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

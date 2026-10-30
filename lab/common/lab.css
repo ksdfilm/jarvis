@@ -1,0 +1,74 @@
+/* LAB shared theme — every app links this first, then its own styles */
+:root {
+  --bg: #01070c;
+  --panel: rgba(4, 18, 28, .86);
+  --line: rgba(60, 231, 255, .22);
+  --c: #3ce7ff;
+  --c2: #a8f4ff;
+  --dim: #5b8f9e;
+  --ok: #3dff9a;
+  --warn: #ffc845;
+  --bad: #ff4d6d;
+  --pink: #ff7ad9;
+  --mono: "Share Tech Mono", "Sarabun", ui-monospace, monospace;
+  --th: "Sarabun", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--c2); font-family: var(--th); }
+body {
+  min-height: 100vh; min-height: 100dvh;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  background: radial-gradient(ellipse at 30% 25%, #062233 0%, var(--bg) 70%) fixed;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: var(--c); }
+
+.lab-bar { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); min-height: 56px; }
+.lab-bar .back { text-decoration: none; font-family: var(--mono); color: var(--dim); border: 1px solid var(--line); padding: 4px 8px; font-size: 13px; }
+.lab-bar .back:hover { color: var(--c); border-color: var(--c); }
+.lab-bar h1 { margin: 0; font-family: var(--mono); font-weight: normal; font-size: 20px; letter-spacing: 2px; color: var(--c); text-shadow: 0 0 10px var(--c); }
+.lab-bar small { display: block; color: var(--dim); font-family: var(--th); letter-spacing: 0; font-size: 12px; text-shadow: none; }
+.lab-bar .right { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+
+.btn { background: transparent; border: 1px solid var(--line); color: var(--c); padding: 8px 12px; cursor: pointer; border-radius: 2px; transition: .15s; font-family: var(--th); }
+.btn:hover { border-color: var(--c); box-shadow: 0 0 10px rgba(60, 231, 255, .3) inset; }
+.btn.on { background: rgba(60, 231, 255, .15); border-color: var(--c); }
+.btn.primary { background: var(--c); color: #001018; border-color: var(--c); box-shadow: 0 0 16px rgba(60, 231, 255, .45); font-weight: 600; }
+.btn.primary:disabled { background: transparent; color: var(--c); animation: lab-blink 1s infinite; }
+.btn.big { padding: 14px 20px; font-size: 17px; }
+.btn.wide { width: 100%; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+@keyframes lab-blink { 50% { opacity: .45; } }
+
+.panel { background: var(--panel); border: 1px solid var(--line); padding: 14px; }
+.panel h2 { margin: 0 0 6px; font-size: 17px; color: var(--c); font-weight: 600; }
+.sub, .note { color: var(--dim); font-size: 13px; line-height: 1.5; }
+.mono { font-family: var(--mono); }
+.big-num { font-family: var(--mono); font-size: 52px; line-height: 1; color: var(--c); text-shadow: 0 0 14px var(--c); }
+.big-num small { font-size: 16px; color: var(--dim); margin-left: 6px; }
+input[type=text], input[type=number], select, textarea { background: #000; border: 1px solid var(--line); color: var(--c2); padding: 8px 10px; outline: none; }
+input:focus, select:focus, textarea:focus { border-color: var(--c); }
+input[type=range] { accent-color: var(--c); }
+
+/* camera / canvas stage that keeps the video aspect */
+.stage { position: relative; background: #000; border: 1px solid var(--line); overflow: hidden; }
+.stage video, .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.stage video { object-fit: cover; }
+.mirror { transform: scaleX(-1); }
+
+/* start gate */
+.lab-gate { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 16px; background: rgba(1, 7, 12, .95); }
+.lab-gate .box { max-width: 520px; }
+.lab-gate h2 { font-family: var(--mono); font-weight: normal; color: var(--c); letter-spacing: 3px; text-shadow: 0 0 16px var(--c); margin: 0 0 8px; font-size: 28px; }
+.lab-gate ul { padding-left: 20px; line-height: 1.7; color: #cfe9ef; }
+.lab-gate .err { color: var(--bad); }
+
+.lab-toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 200; background: rgba(0, 12, 20, .95); border: 1px solid var(--c); padding: 10px 16px; max-width: 90vw; font-size: 14px; box-shadow: 0 0 20px rgba(60, 231, 255, .3); animation: lab-pop .2s; }
+@keyframes lab-pop { from { opacity: 0; transform: translate(-50%, 10px); } }
+.scanlines::after { content: ""; pointer-events: none; position: fixed; inset: 0; z-index: 90; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .16) 0 1px, transparent 1px 3px); }
+
+@media (max-width: 700px) {
+  .lab-bar h1 { font-size: 17px; }
+  .big-num { font-size: 42px; }
+}
+[hidden] { display: none !important; }

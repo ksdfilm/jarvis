@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#01070c">
+<title>ศูนย์บัญชาการโลก · KSD LAB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../common/lab.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
+  "satellite.js": "https://cdn.jsdelivr.net/npm/satellite.js@6.0.2/+esm"
+} }
+</script>
+<style>
+  html, body { height: 100%; overflow: hidden; }
+  body { display: flex; flex-direction: column; background: #000 radial-gradient(ellipse at 50% 50%, #04141f 0%, #000 70%) fixed; }
+  #stage { position: relative; flex: 1; min-height: 0; touch-action: none; }
+  #stage canvas { display: block; width: 100%; height: 100%; outline: none; }
+  #loading { position: absolute; inset: 0; display: grid; place-items: center; font: 16px var(--mono); color: var(--c); letter-spacing: 3px; text-shadow: 0 0 10px var(--c); pointer-events: none; }
+  .hud { position: absolute; z-index: 5; background: var(--panel); border: 1px solid var(--line); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  #counters { left: 10px; top: 10px; padding: 8px 12px; font-family: var(--mono); display: grid; grid-template-columns: auto auto; gap: 2px 14px; font-size: 13px; pointer-events: none; }
+  #counters b { color: var(--c); font-weight: normal; text-align: right; font-size: 16px; text-shadow: 0 0 8px var(--c); }
+  #counters .utc { grid-column: 1 / -1; font-size: 20px; color: var(--c); text-shadow: 0 0 10px var(--c); border-bottom: 1px solid var(--line); padding-bottom: 4px; margin-bottom: 2px; }
+  #layers { left: 10px; bottom: 10px; padding: 8px 10px; width: 250px; font-size: 13px; }
+  #layers h3 { margin: 2px 0 4px; font: 12px var(--mono); color: var(--dim); letter-spacing: 1px; display: flex; justify-content: space-between; }
+  #layers label { display: flex; align-items: center; gap: 6px; padding: 2px 0; cursor: pointer; }
+  #layers label .n { margin-left: auto; font-family: var(--mono); color: var(--dim); font-size: 12px; }
+  #layers label i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; }
+  #layers input { accent-color: var(--c); }
+  #layers .msg { font-size: 11px; color: var(--warn); line-height: 1.4; margin: 2px 0 4px 20px; }
+  #layers .row { display: flex; gap: 6px; margin-top: 8px; }
+  #layers .row .btn { flex: 1; padding: 6px 4px; font-size: 13px; }
+  #layersBtn { display: none; }
+  #info { right: 10px; top: 10px; width: 300px; padding: 12px; font-size: 13px; display: none; max-height: calc(100% - 20px); overflow: auto; }
+  #info.on { display: block; }
+  #info h2 { margin: 0 24px 2px 0; font: 22px var(--mono); color: var(--c); text-shadow: 0 0 10px var(--c); word-break: break-word; }
+  #info .k { color: var(--dim); font-size: 12px; margin-bottom: 6px; }
+  #info table { width: 100%; border-collapse: collapse; }
+  #info td { padding: 3px 0; border-bottom: 1px solid rgba(60, 231, 255, .08); vertical-align: top; }
+  #info td:last-child { text-align: right; font-family: var(--mono); color: var(--c2); }
+  #info .x { position: absolute; right: 6px; top: 4px; background: none; border: 0; color: var(--dim); font-size: 22px; cursor: pointer; }
+  #info a { font-size: 12px; }
+  #tag { position: absolute; z-index: 4; left: 0; top: 0; pointer-events: none; font: 12px var(--mono); color: #fff; text-shadow: 0 0 4px #000, 0 0 2px #000; white-space: nowrap; display: none; }
+  #tag::before { content: ""; position: absolute; left: -9px; top: -9px; width: 14px; height: 14px; border: 1.5px solid var(--warn); border-radius: 50%; box-shadow: 0 0 8px var(--warn); }
+  #tag span { position: relative; left: 10px; top: -6px; background: rgba(0, 10, 16, .75); padding: 1px 5px; border: 1px solid rgba(255, 200, 69, .5); }
+  .thl { position: absolute; left: 0; top: 0; z-index: 3; pointer-events: none; font: 11px var(--mono); color: var(--ok); text-shadow: 0 0 4px #000; display: none; }
+
+  @media (max-width: 700px) {
+    #counters { left: 6px; top: 6px; padding: 5px 8px; font-size: 11px; gap: 0 10px; }
+    #counters b { font-size: 13px; }
+    #counters .utc { font-size: 15px; }
+    #layersBtn { display: block; position: absolute; z-index: 6; right: 6px; top: 6px; padding: 6px 10px; }
+    #layers { display: none; left: 6px; right: 6px; bottom: 6px; width: auto; max-height: 60%; overflow: auto; }
+    #layers.open { display: block; }
+    #info { left: 6px; right: 6px; top: auto; bottom: 6px; width: auto; max-height: 46%; padding: 10px; }
+    #info h2 { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="loading">กำลังโหลดลูกโลก…</div>
+  <div class="hud" id="counters"></div>
+  <button class="btn hud" id="layersBtn">☰ ชั้นข้อมูล</button>
+  <div class="hud" id="layers"></div>
+  <div class="hud" id="info"></div>
+  <div id="tag"><span></span></div>
+  <div class="thl" id="bkk">◉ กรุงเทพฯ</div>
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

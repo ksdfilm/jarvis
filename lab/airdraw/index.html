@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#01070c">
+<title>AIR//DRAW</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../common/lab.css">
+<script type="importmap">{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/" } }</script>
+<style>
+  html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+  body { display: flex; flex-direction: column; user-select: none; -webkit-user-select: none; }
+  #view { position: relative; flex: 1; min-height: 0; overflow: hidden; touch-action: none; }
+  #view > canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .pip { top: 10px; right: 10px; }
+  #how { position: absolute; left: 10px; top: 10px; max-width: min(420px, calc(100% - 140px)); font-size: 13px; line-height: 1.55; padding: 8px 10px; }
+  #how b { color: var(--warn); }
+  #how .x { float: right; border: 0; padding: 0 4px; margin-left: 6px; }
+  #state { position: absolute; left: 10px; bottom: 10px; font-family: var(--mono); font-size: 13px; color: var(--c); text-shadow: 0 0 8px var(--c); pointer-events: none; }
+  #state .big { font-size: 16px; color: var(--warn); }
+  #depth { position: absolute; right: 10px; bottom: 10px; width: 16px; height: 120px; border: 1px solid var(--line); background: rgba(0, 16, 24, .6); pointer-events: none; display: none; }
+  #depth i { position: absolute; left: -2px; right: -2px; height: 4px; background: var(--c); box-shadow: 0 0 8px var(--c); }
+  #depth::before, #depth::after { position: absolute; right: 20px; font-size: 11px; color: var(--dim); white-space: nowrap; }
+  #depth::before { content: "ใกล้"; bottom: -2px; }
+  #depth::after { content: "ไกล"; top: -2px; }
+  #clearRing { position: absolute; left: 50%; top: 50%; width: 120px; height: 120px; margin: -60px; border-radius: 50%; display: none; place-items: center; font-size: 14px; color: var(--bad); pointer-events: none;
+    background: conic-gradient(var(--bad) calc(var(--p) * 1turn), rgba(255, 77, 109, .12) 0); -webkit-mask: radial-gradient(circle, transparent 52px, #000 53px); mask: radial-gradient(circle, transparent 52px, #000 53px); }
+  #clearTxt { position: absolute; left: 0; right: 0; top: calc(50% + 70px); text-align: center; color: var(--bad); font-size: 14px; pointer-events: none; display: none; }
+  #tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--panel); }
+  #pal { display: flex; gap: 6px; }
+  #pal button { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; box-shadow: 0 0 10px currentColor; padding: 0; }
+  #pal button.on { border-color: #fff; transform: scale(1.12); }
+  #tools label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--dim); }
+  #tools input[type=range] { width: 90px; }
+  #tools .sp { flex: 1; }
+  .lab-gate a.alt { display: inline-block; margin-top: 6px; color: var(--c); }
+  @media (max-width: 700px) {
+    #how { font-size: 12px; max-width: calc(100% - 120px); }
+    #tools { gap: 6px; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); }
+    #tools .btn { padding: 6px 8px; font-size: 13px; }
+    #pal button { width: 26px; height: 26px; }
+    #tools .sp { display: none; }
+    #tools input[type=range] { width: 70px; }
+    .lg { display: none; }
+  }
+</style>
+</head>
+<body class="scanlines">
+<div id="view">
+  <div id="how" class="panel"><button class="btn x" id="howX">✕</button>
+    ✍ <b>จีบนิ้วโป้ง+นิ้วชี้ค้างไว้ = วาด</b> ปล่อย = หยุด <span class="lg">(เลือกแบบจีบเพราะเริ่ม-หยุดเส้นได้แม่นกว่าการชูนิ้ว)</span><br>
+    ↕ <b>ยื่นมือเข้าใกล้กล้อง</b> = เส้นลอยมาข้างหน้า · ถอยออก = ลึกเข้าไป<br>
+    ✋ <b>แบมือค้าง 1.5 วิ</b> = ล้างทั้งหมด · <b>ลากจอ</b> = หมุนดูรอบทิศ
+  </div>
+  <div id="state"></div>
+  <div id="depth"><i></i></div>
+  <div id="clearRing"></div><div id="clearTxt">แบมือค้างไว้เพื่อล้าง…</div>
+</div>
+<div id="tools">
+  <div id="pal"></div>
+  <label>หนา <input type="range" id="thick" min="0.02" max="0.16" step="0.01" value="0.06"></label>
+  <span class="sp"></span>
+  <button class="btn" id="btnUndo">↶ ย้อน</button>
+  <button class="btn" id="btnClear">🗑 ล้าง</button>
+  <button class="btn" id="btnSpin">🔄 หมุน</button>
+  <button class="btn" id="btnMouse">🖱 วาด<span class="lg">ด้วยนิ้ว/เมาส์</span></button>
+  <button class="btn" id="btnPng">⬇ PNG</button>
+  <button class="btn" id="btnCam">📷 กล้อง</button>
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

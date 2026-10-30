@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#01070c">
+<title>เรดาร์เครื่องบินเหนือหัว · KSD LAB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../common/lab.css">
+<style>
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 460px; gap: 12px; padding: 12px 16px 24px; max-width: 1500px; margin: 0 auto; }
+  .left { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  #ctl { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 10px; font-size: 13px; }
+  #ctl select, #ctl input { padding: 5px 6px; font-size: 13px; }
+  #ctl input[type=number] { width: 92px; }
+  #ctl .btn { padding: 5px 9px; font-size: 13px; }
+  #ctl .sp { flex: 1; }
+  #radarBox { position: relative; aspect-ratio: 1; width: 100%; max-height: calc(100dvh - 190px); max-width: calc(100dvh - 190px); margin: 0 auto; touch-action: manipulation; }
+  #radar { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; }
+  #status { position: absolute; left: 8px; top: 6px; font: 12px var(--mono); color: var(--dim); pointer-events: none; }
+  #status b { color: var(--ok); font-weight: normal; }
+  #status.err b { color: var(--warn); }
+  #legend { position: absolute; right: 8px; top: 6px; font: 11px var(--mono); color: var(--dim); display: flex; align-items: center; gap: 6px; pointer-events: none; }
+  #legend i { display: block; width: 90px; height: 6px; background: linear-gradient(90deg, #ff7a3d, #ffc845, #3dff9a, #3ce7ff, #b48cff); }
+
+  .right { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  #top { padding: 12px; border-color: var(--c); box-shadow: 0 0 20px rgba(60, 231, 255, .15) inset; }
+  #top .k { font: 12px var(--mono); color: var(--dim); letter-spacing: 1px; }
+  #top .cs { font: 30px var(--mono); color: var(--c); text-shadow: 0 0 12px var(--c); line-height: 1.1; }
+  #top .al { color: var(--c2); }
+  #top .look { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+  #top .look canvas { flex: none; }
+  #top .look .t { font-size: 14px; line-height: 1.5; }
+  #top .look .t b { font: 20px var(--mono); color: var(--warn); font-weight: normal; }
+  #top .g { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; text-align: center; }
+  #top .g div { border: 1px solid var(--line); padding: 4px 2px; }
+  #top .g small { display: block; color: var(--dim); font-size: 11px; }
+  #top .g span { font-family: var(--mono); color: var(--c); }
+  #top a { font-size: 12px; }
+  #list { padding: 0; overflow: auto; max-height: calc(100dvh - 400px); min-height: 200px; }
+  #list .msg { padding: 14px; color: var(--warn); line-height: 1.6; }
+  .row { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 8px 10px; border-bottom: 1px solid rgba(60, 231, 255, .1); cursor: pointer; }
+  .row:hover, .row.sel { background: rgba(60, 231, 255, .08); }
+  .row.sel { box-shadow: 3px 0 0 var(--c) inset; }
+  .row .cs { font-family: var(--mono); color: var(--c); font-size: 16px; }
+  .row .cs i { font-style: normal; display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
+  .row .al { color: var(--c2); font-size: 13px; }
+  .row .ty { color: var(--dim); font-size: 12px; }
+  .row .r { text-align: right; font-family: var(--mono); font-size: 13px; color: var(--c2); }
+  .row .r b { color: var(--warn); font-weight: normal; }
+  .row .d { font-family: var(--mono); font-size: 18px; color: var(--c); text-align: right; }
+  .hdr { display: flex; justify-content: space-between; padding: 8px 10px; font: 12px var(--mono); color: var(--dim); border-bottom: 1px solid var(--line); position: sticky; top: 0; background: #031119; z-index: 1; }
+
+  @media (max-width: 1000px) {
+    main { grid-template-columns: 1fr; padding: 8px 8px 24px; }
+    #radarBox { max-height: none; max-width: none; }
+    #list { max-height: none; }
+    #top .cs { font-size: 24px; }
+  }
+  @media (max-width: 700px) {
+    #ctl { padding: 6px 8px; }
+    #ctl input[type=number] { width: 78px; }
+    #legend { top: auto; bottom: 6px; right: 6px; } #legend i { width: 50px; }
+    #status { font-size: 11px; }
+  }
+</style>
+</head>
+<body class="scanlines">
+<main>
+  <section class="left">
+    <div class="panel" id="ctl"></div>
+    <div class="panel stage" id="radarBox">
+      <canvas id="radar"></canvas>
+      <div id="status">กำลังเริ่ม…</div>
+      <div id="legend">ต่ำ<i></i>สูง 40,000 ft</div>
+    </div>
+  </section>
+  <section class="right">
+    <div class="panel" id="top"><div class="k">ลำที่ใกล้หัวคุณที่สุด</div><div class="note">กำลังรอข้อมูล…</div></div>
+    <div class="panel" id="list"></div>
+  </section>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>

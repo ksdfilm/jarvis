@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#01070c">
+<title>AIR//MOUSE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../common/lab.css">
+<style>
+  html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+  body { display: flex; flex-direction: column; user-select: none; -webkit-user-select: none; }
+  .notice { margin: 0; padding: 6px 16px; font-size: 12.5px; color: var(--warn); border-bottom: 1px solid var(--line); background: rgba(255, 200, 69, .06); line-height: 1.45; }
+  #status { display: flex; gap: 10px; align-items: center; padding: 6px 16px; font-family: var(--mono); font-size: 13px; color: var(--dim); flex-wrap: wrap; }
+  #gest { color: var(--c); border: 1px solid var(--line); padding: 2px 8px; min-width: 120px; }
+  #gest.click { color: #001018; background: var(--warn); border-color: var(--warn); }
+  #gest.drag { color: var(--warn); border-color: var(--warn); }
+  #status label { display: flex; gap: 6px; align-items: center; margin-left: auto; font-family: var(--th); }
+  #surface { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto 1fr auto; grid-template-areas: 'btn game' 'list game' 'sl game'; gap: 12px; padding: 4px 16px calc(12px + env(safe-area-inset-bottom)); }
+  .card { display: flex; flex-direction: column; min-height: 0; }
+  .card h2 { font-size: 15px; display: flex; justify-content: space-between; gap: 8px; }
+  .card h2 span { font-family: var(--mono); color: var(--dim); font-weight: normal; font-size: 13px; }
+  .bigs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .bigs button { min-height: 72px; font-size: 18px; border: 1px solid var(--line); background: rgba(60, 231, 255, .04); color: var(--c2); cursor: pointer; transition: .12s; }
+  .bigs button b { display: block; font-family: var(--mono); font-size: 13px; color: var(--dim); font-weight: normal; }
+  .bigs button.flash { background: var(--c); color: #001018; box-shadow: 0 0 24px var(--c); }
+  .air-hover { outline: 2px solid var(--pink); outline-offset: -2px; box-shadow: 0 0 16px rgba(255, 122, 217, .35) inset; }
+  #list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; min-height: 90px; border: 1px solid var(--line); touch-action: pan-y; }
+  #list li { padding: 10px 12px; border-bottom: 1px solid rgba(60, 231, 255, .08); display: flex; justify-content: space-between; cursor: pointer; }
+  #list li.sel { background: rgba(60, 231, 255, .16); color: var(--c); }
+  #list li i { font-style: normal; color: var(--dim); font-family: var(--mono); }
+  .sl { position: relative; height: 44px; margin: 4px 6px; cursor: pointer; touch-action: none; }
+  .sl .track { position: absolute; left: 0; right: 0; top: 19px; height: 6px; background: rgba(60, 231, 255, .15); }
+  .sl .fill { position: absolute; left: 0; top: 19px; height: 6px; background: var(--c); box-shadow: 0 0 10px var(--c); }
+  .sl .knob { position: absolute; top: 8px; width: 28px; height: 28px; margin-left: -14px; border-radius: 50%; background: #001018; border: 2px solid var(--c); box-shadow: 0 0 12px var(--c); }
+  #bulb { width: 100%; height: 26px; margin-top: 4px; border: 1px solid var(--line); }
+  #game { position: relative; flex: 1; min-height: 150px; border: 1px solid var(--line); overflow: hidden; background: radial-gradient(ellipse at 50% 120%, rgba(60, 231, 255, .12), transparent 70%); touch-action: none; }
+  .bub { position: absolute; border-radius: 50%; border: 2px solid rgba(168, 244, 255, .8); background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, .55), rgba(60, 231, 255, .15) 45%, rgba(255, 122, 217, .12)); box-shadow: 0 0 14px rgba(60, 231, 255, .35); cursor: pointer; }
+  .pop { position: absolute; pointer-events: none; font-family: var(--mono); color: var(--warn); font-size: 18px; animation: up .6s forwards; }
+  @keyframes up { to { transform: translateY(-30px); opacity: 0; } }
+  #gameMsg { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--c2); pointer-events: none; }
+  #gameMsg button { pointer-events: auto; }
+  #gameMsg[hidden] { display: none; }
+  #cursor { position: fixed; left: 0; top: 0; width: 34px; height: 34px; margin: -17px 0 0 -17px; z-index: 80; pointer-events: none; display: none; }
+  #cursor::before { content: ""; position: absolute; inset: 0; border: 2px solid var(--c); border-radius: 50%; box-shadow: 0 0 14px var(--c); transition: transform .1s, background .1s; }
+  #cursor::after { content: ""; position: absolute; left: 15px; top: 15px; width: 4px; height: 4px; background: var(--c2); border-radius: 50%; }
+  #cursor.pinch::before { transform: scale(.55); background: rgba(255, 200, 69, .5); border-color: var(--warn); box-shadow: 0 0 18px var(--warn); }
+  #cursor.lost::before { border-style: dashed; opacity: .4; }
+  .pip { right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 70; width: min(26vw, 200px); }
+  .lab-gate a.alt { display: inline-block; margin-top: 6px; color: var(--c); }
+  @media (max-width: 700px) {
+    #surface { grid-template-columns: 1fr; grid-template-rows: auto minmax(110px, 1fr) auto minmax(170px, 1.4fr); grid-template-areas: 'btn' 'list' 'sl' 'game'; gap: 8px; }
+    .card.panel { padding: 8px 10px; }
+    .card h2 { font-size: 14px; margin-bottom: 4px; }
+    .bigs button { min-height: 56px; font-size: 16px; }
+    .notice { font-size: 11.5px; padding: 5px 12px; }
+    #status { padding: 4px 12px; font-size: 12px; }
+    #status label { display: none; }
+    #surface { padding: 2px 12px calc(10px + env(safe-area-inset-bottom)); }
+    .pip { width: 96px; bottom: auto; top: 64px; }
+  }
+</style>
+</head>
+<body class="scanlines">
+<p class="notice">⚠ เว็บเพจควบคุมได้เฉพาะ “ภายในหน้านี้” เท่านั้น — เบราว์เซอร์ไม่อนุญาตให้เว็บขยับเมาส์จริงของระบบ (Windows/iOS) เพื่อความปลอดภัย</p>
+<div id="status">
+  <span id="gest">ไม่เห็นมือ</span><span id="fps"></span>
+  <label>ระยะเอื้อม <input type="range" id="reach" min="0.05" max="0.3" step="0.01" value="0.18"></label>
+</div>
+<main id="surface">
+  <section class="card panel" style="grid-area: btn">
+    <h2>ปุ่มใหญ่ <span id="lastBtn">จีบนิ้ว = คลิก</span></h2>
+    <div class="bigs">
+      <button data-n="0">🔴<b>0</b></button><button data-n="0">🟢<b>0</b></button><button data-n="0">🔵<b>0</b></button><button data-n="0">⭐<b>0</b></button>
+    </div>
+  </section>
+  <section class="card panel" style="grid-area: game">
+    <h2>เกมจิ้มฟองสบู่ <span id="score">0 แต้ม</span></h2>
+    <div id="game"><div id="gameMsg"><div>เล็งฟองแล้ว <b>จีบนิ้ว</b> เพื่อจิ้มแตก<br><br><button class="btn primary" id="btnGame">▶ เริ่มเกม 30 วินาที</button></div></div></div>
+  </section>
+  <section class="card panel" style="grid-area: list">
+    <h2>รายการเลื่อน <span id="pick">จีบค้าง + ลากขึ้นลง</span></h2>
+    <ul id="list"></ul>
+  </section>
+  <section class="card panel" style="grid-area: sl">
+    <h2>สไลเดอร์ <span id="slVal">50%</span></h2>
+    <div class="sl" id="slider"><div class="track"></div><div class="fill"></div><div class="knob"></div></div>
+    <div id="bulb"></div>
+  </section>
+</main>
+<div id="cursor"></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

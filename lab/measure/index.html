@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#01070c">
+<title>MEASURE//AR — วัดระยะ/ความสูง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../common/lab.css">
+<style>
+  body { display: flex; flex-direction: column; }
+  main { flex: 1; display: grid; grid-template-rows: minmax(300px, 58dvh) auto; gap: 0; }
+  #stage { border-left: 0; border-right: 0; touch-action: manipulation; }
+  #stage video { opacity: .9; }
+  #live { position: absolute; left: 0; right: 0; top: 10px; text-align: center; pointer-events: none; text-shadow: 0 0 8px #000, 0 0 3px #000; }
+  #live .big-num { font-size: 44px; }
+  #live .sub2 { font-family: var(--mono); color: var(--c2); font-size: 15px; margin-top: 2px; }
+  #aimHint { position: absolute; left: 50%; transform: translateX(-50%); bottom: 12px; background: rgba(0, 10, 18, .78); border: 1px solid var(--line); padding: 6px 12px; font-size: 14px; white-space: nowrap; max-width: calc(100% - 20px); overflow: hidden; text-overflow: ellipsis; }
+  #panel { padding: 10px 12px calc(16px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; }
+  .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .tabs .btn { padding: 9px 4px; font-size: 14px; }
+  .steps { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .steps .btn { padding: 14px 6px; font-size: 16px; }
+  .res { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .res .panel { padding: 10px; }
+  .res .lbl { color: var(--dim); font-size: 13px; }
+  .res .v { font-family: var(--mono); font-size: 30px; color: var(--c); text-shadow: 0 0 10px rgba(60, 231, 255, .5); }
+  .res .v small { font-size: 14px; color: var(--dim); }
+  .res .err { font-size: 12px; color: var(--dim); }
+  .hrow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .hrow input[type=number] { width: 86px; text-align: center; font-family: var(--mono); font-size: 18px; }
+  .hrow .btn { padding: 6px 12px; }
+  .warnbox { border: 1px solid rgba(255, 200, 69, .4); color: var(--warn); padding: 8px 10px; font-size: 13px; line-height: 1.5; background: rgba(255, 200, 69, .06); }
+  #hist { display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow: auto; }
+  .hi { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; border-bottom: 1px solid var(--line); padding: 6px 2px; font-size: 14px; }
+  .hi .t { color: var(--dim); font-family: var(--mono); font-size: 12px; }
+  .hi b { font-family: var(--mono); color: var(--c2); font-weight: normal; }
+  .hi button { padding: 2px 8px; }
+  #sim { display: none; }
+  #sim.on { display: block; }
+  #sim label { display: block; font-size: 13px; color: var(--dim); }
+  #sim input { width: 100%; }
+  [hidden] { display: none !important; }
+  @media (min-width: 900px) {
+    main { grid-template-columns: 1fr 420px; grid-template-rows: 1fr; height: calc(100dvh - 57px); }
+    #stage { border: 0; border-right: 1px solid var(--line); }
+    #panel { overflow: auto; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div id="stage" class="stage">
+    <video id="vid" playsinline muted autoplay></video>
+    <canvas id="cv"></canvas>
+    <div id="live"><div class="big-num" id="liveBig">--</div><div class="sub2" id="liveSub"></div></div>
+    <div id="aimHint">--</div>
+  </div>
+  <section id="panel">
+    <div class="tabs">
+      <button class="btn on" data-mode="measure">📏 ระยะ/ความสูง</button>
+      <button class="btn" data-mode="level">◎ ระดับน้ำ</button>
+      <button class="btn" data-mode="angle">📐 วัดมุมเอียง</button>
+    </div>
+    <div class="warnbox" id="noSensor" hidden>ฟีเจอร์นี้ต้องใช้ <b>มือถือ</b> ที่มีเซนเซอร์วัดการเอียง (เปิดลิงก์นี้บน iPhone/Android ผ่าน https) — บนคอมใช้แถบเลื่อน “จำลองมุม” ด้านล่างเพื่อลองดูการทำงานได้</div>
+
+    <!-- measure mode -->
+    <div data-pane="measure">
+      <div class="steps">
+        <button class="btn primary" id="bBase">① 📍 เล็งฐาน → วัดระยะ</button>
+        <button class="btn" id="bTop" disabled>② ⬆ เล็งยอด → วัดสูง</button>
+      </div>
+      <div class="res" style="margin-top:8px">
+        <div class="panel"><div class="lbl">ระยะถึงวัตถุ</div><div class="v" id="rDist">--</div><div class="err" id="rDistErr"></div></div>
+        <div class="panel"><div class="lbl">ความสูงวัตถุ</div><div class="v" id="rHeight">--</div><div class="err" id="rHErr"></div></div>
+      </div>
+      <div class="hrow" style="margin-top:8px">
+        <span>ความสูงกล้องจากพื้น</span>
+        <button class="btn" id="hMinus">−</button><input type="number" id="camH" step="0.01" min="0.2" max="3" inputmode="decimal"><button class="btn" id="hPlus">+</button><span>ม.</span>
+      </div>
+      <div class="hrow" style="margin-top:6px">
+        <label class="sub"><input type="checkbox" id="knownOn"> รู้ระยะอยู่แล้ว (เช่น วัดด้วยตลับเมตร)</label>
+        <input type="number" id="knownD" step="0.1" min="0.1" placeholder="ม." hidden>
+      </div>
+      <div class="hrow" style="margin-top:8px"><button class="btn" id="bSave" disabled>💾 บันทึกผล</button><button class="btn" id="bReset">↺ เริ่มใหม่</button></div>
+      <p class="note">หลักการ: ระยะ = h × tan(มุมจากแนวดิ่ง) เมื่อ h = ความสูงกล้อง · ความสูง = h + ระยะ × tan(มุมเงย)<br>
+      ⚠ ความแม่นยำประมาณ <b>±5–10%</b> ขึ้นกับ: พื้นต้องเรียบและระดับเดียวกัน, ใส่ความสูงกล้องให้ถูก (วัดถึงเลนส์ ไม่ใช่ระดับตา), ถือนิ่งๆ ตอนกด และวัตถุไม่ไกลเกิน ~15 ม.</p>
+    </div>
+
+    <!-- level mode -->
+    <div data-pane="level" hidden>
+      <p class="note">วางมือถือ <b>นอนราบ</b> บนพื้นผิว = ระดับน้ำแบบฟองกลม · <b>ตั้งขึ้น</b> พิงผนัง/วางขอบบนพื้นผิว = ระดับน้ำแบบแท่ง</p>
+      <div class="hrow"><button class="btn" id="bZeroL">⊙ ตั้งศูนย์ที่ตำแหน่งนี้</button><button class="btn" id="bUnzeroL">ล้างค่าศูนย์</button></div>
+    </div>
+
+    <!-- angle mode -->
+    <div data-pane="angle" hidden>
+      <p class="note">วาง <b>ขอบยาว</b> ของมือถือทาบบนเส้น/พื้นผิวที่ต้องการวัด (ตั้งมือถือขึ้น) → อ่านมุมเอียงเทียบแนวราบ · หรือวาง <b>หลังมือถือ</b> บนพื้นเอียง → อ่านมุมลาดของพื้น</p>
+      <div class="hrow"><button class="btn" id="bHold">⏸ ค้างค่า</button><button class="btn" id="bRel">⊙ วัดมุมสัมพัทธ์ (ตั้งศูนย์)</button><button class="btn" id="bAbs">ล้างค่าศูนย์</button><button class="btn" id="bSaveA">💾 บันทึก</button></div>
+    </div>
+
+    <div id="sim"><label>จำลองมุม β (ก้ม-เงย) <span id="vB"></span><input type="range" id="simB" min="-10" max="180" step="0.1" value="60"></label>
+      <label>จำลองมุม γ (เอียงซ้าย-ขวา) <span id="vG"></span><input type="range" id="simG" min="-90" max="90" step="0.1" value="0"></label></div>
+
+    <div>
+      <div class="hrow" style="justify-content:space-between"><b style="color:var(--c)">ประวัติการวัด</b><button class="btn" id="bClear">ล้างทั้งหมด</button></div>
+      <div id="hist"></div>
+    </div>
+  </section>
+</main>
+<script type="module">
+import { bar, gate, camera, wakeLock, store, toast, isIOS, permMsg, $, $$, clamp } from '../common/lab.js';
+const D2R = Math.PI / 180, R2D = 180 / Math.PI;
+bar('MEASURE//AR', 'วัดระยะ · ความสูง · ระดับน้ำ · มุมเอียง');
+
+// ---------- state ----------
+let mode = 'measure', hasCam = false, gotSensor = false, sim = false;
+let up = null;                  // world-up direction in device coordinates (smoothed)
+const elevHist = [];            // recent camera elevation samples (deg) for steady capture
+let base = null, topRes = null; // {dist, theta}  {height, elev}
+let zeroL = store.get('measure.zeroL', null), zeroA = null, hold = null;
+const camH = () => clamp(+$('#camH').value || 1.4, 0.2, 3);
+$('#camH').value = store.get('measure.camH', 1.40).toFixed(2);
+
+// ---------- sensors ----------
+function upFrom(beta, gamma) {   // W3C: world-up in device frame = 3rd row of R = (−cosβ·sinγ, sinβ, cosβ·cosγ)
+  const b = beta * D2R, g = gamma * D2R;
+  return [-Math.cos(b) * Math.sin(g), Math.sin(b), Math.cos(b) * Math.cos(g)];
+}
+function feed(beta, gamma) {
+  const u = upFrom(beta, gamma);
+  if (!up) up = u; else { const k = 0.25; up = up.map((x, i) => x + k * (u[i] - x)); const l = Math.hypot(...up); up = up.map(x => x / l); }
+  elevHist.push({ t: performance.now(), e: elev() }); while (elevHist.length > 60) elevHist.shift();
+}
+addEventListener('deviceorientation', e => { if (e.beta == null || sim) return; gotSensor = true; feed(e.beta, e.gamma || 0); });
+// camera (device −Z) elevation above the horizontal, degrees
+const elev = () => up ? Math.asin(clamp(-up[2], -1, 1)) * R2D : 0;
+// steady value: median of the last ~0.4 s
+function steadyElev() {
+  const t = performance.now(), xs = elevHist.filter(s => t - s.t < 400).map(s => s.e).sort((a, b) => a - b);
+  return xs.length ? xs[xs.length >> 1] : elev();
+}
+const screenAng = () => (screen.orientation?.angle ?? window.orientation ?? 0);
+
+// ---------- math ----------
+const distFrom = (theta, h) => h / Math.tan(theta * D2R);                     // theta = depression below horizontal
+const distErr = (theta, h) => h / Math.sin(theta * D2R) ** 2 * D2R;           // per 1° of angle error
+const heightFrom = (d, e, h) => h + d * Math.tan(e * D2R);
+
+// ---------- UI ----------
+const fm = (m) => m == null || !isFinite(m) ? '--' : m < 10 ? m.toFixed(2) : m.toFixed(1);
+function setMode(m) {
+  mode = m;
+  $$('.tabs .btn').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
+  $$('[data-pane]').forEach(p => p.hidden = p.dataset.pane !== m);
+  $('#vid').style.display = m === 'measure' && hasCam ? '' : 'none';
+}
+$$('.tabs .btn').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+const setH = v => { $('#camH').value = clamp(v, 0.2, 3).toFixed(2); store.set('measure.camH', camH()); recompute(); };
+$('#hMinus').onclick = () => setH(camH() - 0.05);
+$('#hPlus').onclick = () => setH(camH() + 0.05);
+$('#camH').onchange = () => setH(camH());
+$('#knownOn').onchange = () => { $('#knownD').hidden = !$('#knownOn').checked; $('#bBase').disabled = $('#knownOn').checked; useKnown(); };
+$('#knownD').oninput = useKnown;
+function useKnown() {
+  if (!$('#knownOn').checked) { base = null; $('#bBase').disabled = false; render(); return; }
+  const d = +$('#knownD').value; base = d > 0 ? { dist: d, theta: null, known: true } : null;
+  $('#bTop').disabled = !base; $('#bTop').classList.toggle('primary', !!base); render();
+}
+$('#bBase').onclick = () => {
+  const th = -steadyElev();
+  if (th < 2) return toast('ต้องเล็ง “ต่ำกว่าแนวราบ” ไปที่จุดที่วัตถุแตะพื้น (ตอนนี้มุมก้มน้อยเกินไป)');
+  base = { dist: distFrom(th, camH()), theta: th }; topRes = null;
+  $('#bTop').disabled = false; $('#bTop').classList.add('primary'); $('#bBase').classList.remove('primary');
+  navigator.vibrate?.(30); render();
+};
+$('#bTop').onclick = () => {
+  if (!base) return;
+  const e = steadyElev();
+  topRes = { elev: e, height: heightFrom(base.dist, e, camH()) };
+  $('#bSave').disabled = false; navigator.vibrate?.(30); render();
+};
+function recompute() { if (base && !base.known) base.dist = distFrom(base.theta, camH()); if (topRes && base) topRes.height = heightFrom(base.dist, topRes.elev, camH()); render(); }
+$('#bReset').onclick = () => { base = null; topRes = null; $('#knownOn').checked = false; $('#knownD').hidden = true; $('#bBase').disabled = false; $('#bBase').classList.add('primary'); $('#bTop').disabled = true; $('#bTop').classList.remove('primary'); $('#bSave').disabled = true; render(); };
+function render() {
+  $('#rDist').innerHTML = base ? fm(base.dist) + '<small> ม.</small>' : '--';
+  $('#rDistErr').textContent = base && base.theta ? `±${fm(distErr(base.theta, camH()))} ม. ต่อมุมคลาด 1°` + (base.dist > 15 ? ' · ไกลเกิน แม่นน้อย' : '') : base?.known ? 'ระยะที่ใส่เอง' : 'เล็งจุดที่วัตถุแตะพื้น แล้วกด ①';
+  $('#rHeight').innerHTML = topRes ? fm(topRes.height) + '<small> ม.</small>' : '--';
+  $('#rHErr').textContent = topRes ? `มุมเงยยอด ${topRes.elev.toFixed(1)}° · ±${fm(base.dist * D2R / Math.cos(topRes.elev * D2R) ** 2)} ม./1°` : base ? 'เล็งยอดวัตถุ แล้วกด ②' : '';
+}
+
+// history
+const hist = store.get('measure.hist', []);
+function renderHist() {
+  $('#hist').innerHTML = hist.length ? hist.map((h, i) => `<div class="hi"><span class="t">${new Date(h.t).toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+    <b>${h.kind === 'angle' ? `มุม ${h.a.toFixed(1)}°` : `ระยะ ${fm(h.d)} ม.${h.H != null ? ` · สูง ${fm(h.H)} ม.` : ''} <small style="color:var(--dim)">(h=${h.h.toFixed(2)})</small>`}</b>
+    <button class="btn" data-del="${i}">✕</button></div>`).join('') : '<p class="note">ยังไม่มี — กด 💾 บันทึกผล หลังวัด</p>';
+  $$('[data-del]').forEach(b => b.onclick = () => { hist.splice(+b.dataset.del, 1); store.set('measure.hist', hist); renderHist(); });
+}
+renderHist();
+$('#bSave').onclick = () => { if (!base) return; hist.unshift({ t: Date.now(), kind: 'm', d: base.dist, H: topRes?.height ?? null, h: camH() }); hist.length = Math.min(hist.length, 100); store.set('measure.hist', hist); renderHist(); toast('บันทึกแล้ว'); };
+$('#bClear').onclick = () => { if (!hist.length || !confirm('ล้างประวัติทั้งหมด?')) return; hist.length = 0; store.set('measure.hist', hist); renderHist(); };
+
+// level / angle buttons
+let lastLevel = null, lastAngle = null;
+$('#bZeroL').onclick = () => { if (!up) return; zeroL = [...up]; store.set('measure.zeroL', zeroL); toast('ตั้งศูนย์แล้ว'); };
+$('#bUnzeroL').onclick = () => { zeroL = null; store.set('measure.zeroL', null); toast('ใช้ค่าศูนย์จากเซนเซอร์'); };
+$('#bHold').onclick = () => { hold = hold == null ? lastAngle : null; $('#bHold').textContent = hold == null ? '⏸ ค้างค่า' : '▶ ปล่อยค่า'; $('#bHold').classList.toggle('on', hold != null); };
+$('#bRel').onclick = () => { if (lastAngle) { zeroA = lastAngle.v; toast('มุมนี้ = 0° แล้ว วัดมุมต่างจากนี้'); } };
+$('#bAbs').onclick = () => { zeroA = null; };
+$('#bSaveA').onclick = () => { const a = hold ?? lastAngle; if (!a) return; hist.unshift({ t: Date.now(), kind: 'angle', a: a.v - (zeroA ?? 0) }); store.set('measure.hist', hist); renderHist(); toast('บันทึกมุมแล้ว'); };
+
+// desktop simulation
+function enableSim() {
+  sim = true; $('#sim').classList.add('on'); $('#noSensor').hidden = false;
+  const s = () => { $('#vB').textContent = (+$('#simB').value).toFixed(1) + '°'; $('#vG').textContent = (+$('#simG').value).toFixed(1) + '°'; };
+  const tick = () => { if (!sim) return; feed(+$('#simB').value, +$('#simG').value); s(); };
+  setInterval(tick, 33);
+}
+
+// ---------- draw ----------
+const stage = $('#stage'), cv = $('#cv'), ctx = cv.getContext('2d');
+let W, H, DPR;
+function resize() { DPR = Math.min(devicePixelRatio || 1, 2); W = stage.clientWidth; H = stage.clientHeight; cv.width = W * DPR; cv.height = H * DPR; }
+addEventListener('resize', resize); resize();
+
+function draw() {
+  requestAnimationFrame(draw);
+  const c = ctx; c.setTransform(DPR, 0, 0, DPR, 0, 0); c.clearRect(0, 0, W, H);
+  if (!up) { $('#liveBig').textContent = '--'; $('#liveSub').textContent = 'รอข้อมูลเซนเซอร์…'; $('#aimHint').textContent = 'ขยับมือถือเล็กน้อย'; return; }
+  if (mode === 'measure') drawMeasure(c); else if (mode === 'level') drawLevel(c); else drawAngle(c);
+}
+function crosshair(c, cx, cy, col) {
+  c.strokeStyle = col; c.lineWidth = 2;
+  c.beginPath(); c.arc(cx, cy, 26, 0, 7); c.moveTo(cx - 44, cy); c.lineTo(cx - 10, cy); c.moveTo(cx + 10, cy); c.lineTo(cx + 44, cy); c.moveTo(cx, cy - 44); c.lineTo(cx, cy - 10); c.moveTo(cx, cy + 10); c.lineTo(cx, cy + 44); c.stroke();
+  c.fillStyle = col; c.beginPath(); c.arc(cx, cy, 2.5, 0, 7); c.fill();
+}
+function drawMeasure(c) {
+  const cx = W / 2, cy = H / 2, e = elev(), h = camH();
+  // artificial horizon: where the horizontal plane through the camera crosses the screen (vertical FOV ~ 60°)
+  const fpx = (H / 2) / Math.tan(30 * D2R), roll = Math.atan2(up[0], up[1]) - screenAng() * D2R;
+  const off = Math.tan(e * D2R) * fpx;
+  c.save(); c.translate(cx, cy); c.rotate(roll);
+  c.strokeStyle = 'rgba(61,255,154,.6)'; c.setLineDash([8, 6]); c.lineWidth = 1.5;
+  c.beginPath(); c.moveTo(-W, off); c.lineTo(W, off); c.stroke(); c.setLineDash([]);
+  c.fillStyle = 'rgba(61,255,154,.8)'; c.font = '12px Sarabun'; c.fillText('แนวระดับสายตากล้อง', 10 - W / 2 + 10, off - 5);
+  c.restore();
+  const aimingDown = e < -1.5;
+  crosshair(c, cx, cy, aimingDown || base ? '#3ce7ff' : '#ffc845');
+  $('#liveBig').innerHTML = `${Math.abs(e).toFixed(1)}°<small>${e < 0 ? 'ก้ม' : 'เงย'}</small>`;
+  if (!base) {
+    if (aimingDown) {
+      const d = distFrom(-e, h);
+      $('#liveSub').textContent = `ระยะถึงจุดเล็ง ≈ ${fm(d)} ม.`;
+      $('#aimHint').textContent = '① เล็งกากบาทที่ “โคน” วัตถุ (จุดแตะพื้น) แล้วกดปุ่ม ①';
+    } else { $('#liveSub').textContent = 'เล็งต่ำลงที่พื้น'; $('#aimHint').textContent = '① ก้มกล้องลง เล็งที่โคนวัตถุบนพื้น'; }
+  } else {
+    const Hh = heightFrom(base.dist, e, h);
+    $('#liveSub').textContent = `ระยะ ${fm(base.dist)} ม. · ความสูงที่จุดเล็ง ≈ ${fm(Hh)} ม.`;
+    $('#aimHint').textContent = topRes ? `✔ สูง ${fm(topRes.height)} ม. — กด 💾 บันทึก หรือเล็งใหม่แล้วกด ②` : '② เงยขึ้นเล็งที่ “ยอด” วัตถุ แล้วกดปุ่ม ②';
+  }
+}
+function drawLevel(c) {
+  const cx = W / 2, cy = H / 2;
+  let u = up;
+  const flat = Math.abs(u[2]) > 0.75;
+  let ax, ay, txt, ok;
+  if (flat) {
+    // bubble: tilt around device X / Y axes
+    let tx = Math.asin(clamp(u[0], -1, 1)) * R2D, ty = Math.asin(clamp(u[1], -1, 1)) * R2D;
+    if (zeroL && Math.abs(zeroL[2]) > 0.75) { tx -= Math.asin(zeroL[0]) * R2D; ty -= Math.asin(zeroL[1]) * R2D; }
+    const R = Math.min(W, H) * 0.38, s = R / 15;   // 15° to the rim
+    const bx = cx + clamp(tx * s, -R, R), by = cy - clamp(ty * s, -R, R);   // bubble drifts to the higher side
+    ok = Math.hypot(tx, ty) < 0.5;
+    c.strokeStyle = 'rgba(60,231,255,.6)'; c.lineWidth = 2;
+    for (const r of [R, R * 2 / 3, R / 3]) { c.beginPath(); c.arc(cx, cy, r, 0, 7); c.stroke(); }
+    c.beginPath(); c.moveTo(cx - R, cy); c.lineTo(cx + R, cy); c.moveTo(cx, cy - R); c.lineTo(cx, cy + R); c.stroke();
+    c.fillStyle = ok ? 'rgba(61,255,154,.85)' : 'rgba(255,200,69,.85)'; c.shadowColor = c.fillStyle; c.shadowBlur = 18;
+    c.beginPath(); c.arc(bx, by, 22, 0, 7); c.fill(); c.shadowBlur = 0;
+    const tot = Math.hypot(tx, ty);
+    $('#liveBig').innerHTML = `${tot.toFixed(1)}°`;
+    $('#liveSub').textContent = `ซ้าย-ขวา ${tx.toFixed(1)}° · หน้า-หลัง ${ty.toFixed(1)}°`;
+    $('#aimHint').textContent = ok ? '✔ ได้ระดับ' : 'ฟองอยู่ด้านไหน = ด้านนั้นสูงกว่า';
+  } else {
+    let r = Math.atan2(u[0], u[1]) * R2D - screenAng();   // in-plane roll
+    r = ((r + 540) % 360) - 180;
+    if (zeroL && Math.abs(zeroL[2]) <= 0.75) r -= Math.atan2(zeroL[0], zeroL[1]) * R2D;
+    // show the error relative to the closest of 0/90/180/-90 (level or plumb)
+    const near = Math.round(r / 90) * 90, d = r - near;
+    ok = Math.abs(d) < 0.3;
+    const len = Math.min(W, H) * 0.42;
+    c.save(); c.translate(cx, cy);
+    c.strokeStyle = 'rgba(60,231,255,.35)'; c.lineWidth = 1; c.beginPath(); c.moveTo(-len, 0); c.lineTo(len, 0); c.stroke();
+    c.rotate(d * D2R);   // true horizontal as seen on the tilted screen
+    c.strokeStyle = ok ? '#3dff9a' : '#ffc845'; c.lineWidth = 4; c.shadowColor = c.strokeStyle; c.shadowBlur = 12;
+    c.beginPath(); c.moveTo(-len, 0); c.lineTo(len, 0); c.stroke(); c.restore();
+    // tube
+    const tw = Math.min(W * 0.7, 360), th = 40, ty0 = cy + Math.min(H * 0.28, 150);
+    c.strokeStyle = 'rgba(60,231,255,.7)'; c.lineWidth = 2; c.strokeRect(cx - tw / 2, ty0 - th / 2, tw, th);
+    c.beginPath(); c.moveTo(cx - 24, ty0 - th / 2); c.lineTo(cx - 24, ty0 + th / 2); c.moveTo(cx + 24, ty0 - th / 2); c.lineTo(cx + 24, ty0 + th / 2); c.stroke();
+    const bx = cx + clamp(d * (tw / 2) / 10, -tw / 2 + 20, tw / 2 - 20);
+    c.fillStyle = ok ? 'rgba(61,255,154,.85)' : 'rgba(255,200,69,.85)'; c.beginPath(); c.ellipse(bx, ty0, 20, 14, 0, 0, 7); c.fill();
+    $('#liveBig').innerHTML = `${Math.abs(d).toFixed(1)}°`;
+    $('#liveSub').textContent = Math.abs(near) === 90 ? 'แนวดิ่ง (ตั้งฉากพื้น)' : 'แนวระดับ';
+    $('#aimHint').textContent = ok ? '✔ ได้ระดับ' : (d > 0 ? 'ด้านขวาสูงกว่า' : 'ด้านซ้ายสูงกว่า');
+  }
+}
+function drawAngle(c) {
+  const cx = W / 2, cy = H / 2, u = up;
+  const flat = Math.abs(u[2]) > 0.75;
+  let v, label;
+  if (flat) { v = Math.acos(clamp(Math.abs(u[2]), 0, 1)) * R2D; label = 'มุมลาดของพื้นผิว (วางหลังมือถือ)'; }
+  else { v = Math.atan2(u[0], u[1]) * R2D - screenAng(); v = ((v + 540) % 360) - 180; label = 'มุมของขอบมือถือเทียบแนวราบ'; }
+  lastAngle = { v, flat };
+  const shown = (hold ? hold.v : v) - (zeroA ?? 0);
+  // protractor dial
+  const R = Math.min(W, H) * 0.38;
+  c.strokeStyle = 'rgba(60,231,255,.6)'; c.lineWidth = 2;
+  c.beginPath(); c.arc(cx, cy, R, 0, 7); c.stroke();
+  c.font = '11px "Share Tech Mono"'; c.fillStyle = 'rgba(168,244,255,.8)'; c.textAlign = 'center';
+  for (let a = 0; a < 360; a += 5) {   // protractor labels 0…90…0
+    const t = a * D2R, l = a % 30 === 0 ? 16 : a % 10 === 0 ? 10 : 5;
+    c.beginPath(); c.moveTo(cx + Math.cos(t) * R, cy + Math.sin(t) * R); c.lineTo(cx + Math.cos(t) * (R - l), cy + Math.sin(t) * (R - l)); c.stroke();
+    if (a % 30 === 0) { const m = a % 180, lab = m <= 90 ? m : 180 - m; c.fillText(lab + '°', cx + Math.cos(t) * (R - 28), cy + Math.sin(t) * (R - 28) + 4); }
+  }
+  c.strokeStyle = 'rgba(61,255,154,.5)'; c.beginPath(); c.moveTo(cx - R, cy); c.lineTo(cx + R, cy); c.stroke();
+  const t = shown * D2R;
+  c.strokeStyle = hold ? '#ff7ad9' : '#ffc845'; c.lineWidth = 4; c.shadowColor = c.strokeStyle; c.shadowBlur = 12;
+  c.beginPath(); c.moveTo(cx - Math.cos(t) * R, cy - Math.sin(t) * R); c.lineTo(cx + Math.cos(t) * R, cy + Math.sin(t) * R); c.stroke(); c.shadowBlur = 0;   // needle = world horizontal
+  c.lineWidth = 2; c.beginPath(); c.arc(cx, cy, R * 0.3, 0, t, t < 0); c.stroke();
+  $('#liveBig').innerHTML = `${shown.toFixed(1)}°`;
+  $('#liveSub').textContent = (hold ? '⏸ ค้างค่า · ' : '') + (zeroA != null ? 'มุมสัมพัทธ์ · ' : '') + label;
+  $('#aimHint').textContent = flat ? 'ความชัน ' + (Math.tan(Math.abs(shown) * D2R) * 100).toFixed(1) + '%' : 'ทาบขอบยาวกับสิ่งที่ต้องการวัด';
+}
+requestAnimationFrame(draw);
+
+// ---------- start ----------
+const phone = isIOS() || /Android/i.test(navigator.userAgent) || matchMedia('(pointer: coarse)').matches;
+await gate({
+  title: 'MEASURE//AR',
+  lines: [
+    'วัดระยะและความสูงด้วย “มุมเอียงของมือถือ” + ความสูงกล้องจากพื้น (ตรีโกณมิติ)',
+    'ขั้นตอน: ① เล็งกากบาทที่โคนวัตถุบนพื้น → ได้ระยะ · ② เล็งยอด → ได้ความสูง',
+    'มีโหมด ระดับน้ำ และ วัดมุมเอียง ด้วย',
+    phone ? 'ต้องอนุญาต: กล้องหลัง + เซนเซอร์การเคลื่อนไหว' : '⚠ บนคอมไม่มีเซนเซอร์เอียง — จะเปิดโหมดจำลองให้ลองใช้',
+  ],
+  needs: phone ? ['camera', 'motion', 'orientation'] : [],
+  button: phone ? '▶ เปิดกล้อง + เซนเซอร์' : '▶ เริ่ม (โหมดจำลอง)',
+  async onStart() {
+    if (phone) {
+      try { await camera($('#vid'), { facing: 'environment' }); hasCam = true; }
+      catch (e) { toast('เปิดกล้องไม่ได้ — ' + permMsg(e) + ' · ยังวัดได้ แต่ไม่มีภาพ', 6000); }
+      wakeLock();
+    }
+  },
+});
+resize(); setMode('measure');
+setTimeout(() => { if (!gotSensor) { enableSim(); if (phone) toast('ไม่ได้รับข้อมูลเซนเซอร์เอียง — ตรวจสิทธิ์ “การเคลื่อนไหวและการวางแนว” ใน Safari', 7000); } }, phone ? 2500 : 300);
+window.__m = { distFrom, heightFrom, elev, steadyElev, get base() { return base; }, get top() { return topRes; } };
+</script>
+</body>
+</html>

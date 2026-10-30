@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#01070c">
+<title>REMOTE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../common/lab.css">
+<style>
+  main { max-width: 860px; margin: 0 auto; padding: 14px 16px 40px; display: flex; flex-direction: column; gap: 14px; }
+  ol { padding-left: 22px; line-height: 1.8; margin: 8px 0; }
+  li { margin-bottom: 4px; }
+  code, pre { font-family: var(--mono); color: var(--c2); }
+  code { background: rgba(60, 231, 255, .08); padding: 1px 5px; }
+  pre { background: #000; border: 1px solid var(--line); padding: 10px; overflow: auto; max-height: 260px; font-size: 12px; }
+  .free { border: 1px solid var(--ok); color: var(--ok); padding: 8px 12px; font-size: 14px; }
+  .warn { border: 1px solid var(--warn); color: var(--warn); padding: 8px 12px; font-size: 14px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .row input { flex: 1; min-width: 220px; }
+  #testOut { font-family: var(--mono); font-size: 13px; }
+  .tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .tbl td, .tbl th { border-bottom: 1px solid var(--line); padding: 6px; text-align: left; vertical-align: top; }
+</style>
+</head>
+<body class="scanlines">
+<main>
+  <div class="free">💸 ทุกขั้นตอนในหน้านี้ <b>ฟรี 100%</b> — ไม่ต้องใส่บัตรเครดิต ถ้าหน้าเว็บไหนขอบัตร/ให้เลือกแพ็กเกจ ให้เลือก <b>Free</b> หรือข้ามไป</div>
+
+  <section class="panel">
+    <h2>สรุป: ระบบไหนใช้นอกบริษัทได้อย่างไร</h2>
+    <table class="tbl">
+      <tr><th>ระบบ</th><th>วิธี</th><th>ต้องเปิดคอมที่ทำงานไหม</th></tr>
+      <tr><td>✈ ศูนย์บัญชาการโลก / เครื่องบินเหนือหัว</td><td>A · Cloudflare Worker</td><td>ไม่ต้อง</td></tr>
+      <tr><td>🏭 Digital Twin · 🛰 NET//RADAR · 🏥 ห้องพยาบาล · 🪪 ลงเวลา</td><td>B · Tailscale</td><td>ต้องเปิด + XAMPP ทำงานอยู่</td></tr>
+      <tr><td>ระบบอื่นอีก 15 ตัว</td><td>เปิดจาก GitHub ได้อยู่แล้ว</td><td>ไม่ต้อง</td></tr>
+    </table>
+  </section>
+
+  <section class="panel">
+    <h2>A · Cloudflare Worker — ตัวกลางดึงข้อมูลเครื่องบิน (ทำครั้งเดียว ~5 นาที)</h2>
+    <p class="sub">API เครื่องบินไม่ยอมให้เว็บเรียกตรง Worker คือโปรแกรมเล็กๆ บนเซิร์ฟเวอร์ฟรีของ Cloudflare ที่ไปดึงให้แทน · แพ็กเกจ Free ใช้ได้ 100,000 ครั้ง/วัน ถ้าเกินแค่หยุดทำงานถึงวันรุ่งขึ้น <b>ไม่มีการเก็บเงิน</b></p>
+    <ol>
+      <li>เปิด <a href="https://dash.cloudflare.com/sign-up/workers" target="_blank" rel="noopener">dash.cloudflare.com/sign-up/workers</a> สมัครด้วยอีเมล (ฟรี ไม่ต้องใส่บัตร)</li>
+      <li>เมนูซ้าย <b>Workers &amp; Pages</b> → <b>Create</b> → <b>Create Worker</b> (เลือกแบบ Hello World) → ตั้งชื่อ เช่น <code>ksd-proxy</code> → <b>Deploy</b></li>
+      <li>กด <b>Edit code</b> → ลบโค้ดเดิมทั้งหมด → วางโค้ดด้านล่าง → <b>Deploy</b></li>
+      <li>คัดลอกลิงก์ของ Worker (หน้าตาแบบ <code>https://ksd-proxy.ชื่อคุณ.workers.dev</code>) มาวางในช่องด้านล่างแล้วกด "บันทึก + ทดสอบ"</li>
+    </ol>
+    <div class="row"><button class="btn" id="copyCode">📋 คัดลอกโค้ด Worker</button><span class="sub">ไฟล์: lab/remote/worker.js</span></div>
+    <pre id="code">กำลังโหลด…</pre>
+    <div class="row" style="margin-top:10px"><input type="text" id="url" placeholder="https://ksd-proxy.xxxx.workers.dev"><button class="btn primary" id="save">บันทึก + ทดสอบ</button></div>
+    <p id="testOut" class="sub"></p>
+    <p class="note">ลิงก์ที่บันทึกที่นี่ใช้ได้เฉพาะเครื่องนี้ (iPhone ต้องบันทึกอีกครั้ง) — ถ้าส่งลิงก์ให้ผม จะใส่ในไฟล์ <code>common/config.js</code> ให้ทุกเครื่องใช้ได้ทันที</p>
+  </section>
+
+  <section class="panel">
+    <h2>B · Tailscale — เข้าคอมที่ทำงานจากที่ไหนก็ได้ (VPN ส่วนตัว ฟรี)</h2>
+    <p class="sub">iPhone จะคุยกับคอมที่ทำงานผ่านอุโมงค์เข้ารหัส เหมือนนั่งอยู่ในบริษัท — <b>ไม่เปิดเว็บสู่สาธารณะ</b> คนอื่นเข้าไม่ได้ · แพ็กเกจ Personal ฟรี (สูงสุด 3 ผู้ใช้ 100 เครื่อง)</p>
+    <div class="warn">⚠ ติดตั้งโปรแกรม VPN บนคอมของบริษัท ควรแจ้ง/ขออนุญาตฝ่าย IT ก่อน</div>
+    <ol>
+      <li><b>คอมที่ทำงาน:</b> ดาวน์โหลด <a href="https://tailscale.com/download/windows" target="_blank" rel="noopener">tailscale.com/download/windows</a> → ติดตั้ง → Log in (ใช้บัญชี Google ก็ได้) → เลือกแพ็กเกจ <b>Personal (Free)</b></li>
+      <li><b>iPhone:</b> ลงแอป <b>Tailscale</b> จาก App Store → Log in <b>บัญชีเดียวกัน</b> → เปิดสวิตช์ Connected</li>
+      <li>เข้า <a href="https://login.tailscale.com/admin/dns" target="_blank" rel="noopener">login.tailscale.com/admin/dns</a> → เปิด <b>MagicDNS</b> และ <b>HTTPS Certificates</b> (ฟรี — ทำให้กล้อง/ไมค์ใช้ได้ด้วย)</li>
+      <li>บนคอมที่ทำงาน เปิด <b>Command Prompt (Run as administrator)</b> แล้วพิมพ์:<pre>tailscale serve --bg http://localhost:80</pre>
+        จะได้ลิงก์ <code>https://ชื่อคอม.xxxx.ts.net/</code></li>
+      <li>บน iPhone (เปิด Tailscale อยู่) เข้า <code>https://ชื่อคอม.xxxx.ts.net/ksd/lab/</code> — ใช้ได้ทุกระบบ รวมถึง Twin, NET//RADAR, ห้องพยาบาล, ลงเวลา</li>
+    </ol>
+    <p class="note">ต้องการ: คอมที่ทำงานเปิดอยู่ (ตั้ง Windows ไม่ให้ Sleep) + XAMPP Apache ทำงาน + Tailscale ทำงาน · ลิงก์ <code>.ts.net</code> เปิดได้เฉพาะเครื่องที่ล็อกอิน Tailscale บัญชีเดียวกันเท่านั้น · ยกเลิกการแชร์: <code>tailscale serve reset</code></p>
+  </section>
+</main>
+<script type="module">
+import { bar, store, toast, proxyURL, workerURL, $ } from '../common/lab.js';
+bar('REMOTE', 'ใช้จากนอกบริษัท — ฟรีทั้งหมด');
+const code = await (await fetch('worker.js')).text();
+$('#code').textContent = code;
+$('#copyCode').onclick = () => navigator.clipboard.writeText(code).then(() => toast('คัดลอกโค้ดแล้ว — ไปวางใน Cloudflare'));
+$('#url').value = workerURL();
+async function test() {
+  const out = $('#testOut');
+  const u = proxyURL('https://opendata.adsb.fi/api/v2/lat/13.75/lon/100.5/dist/60');
+  if (!u) { out.textContent = 'ยังไม่ได้ตั้งค่า Worker'; return; }
+  out.textContent = 'กำลังทดสอบ…';
+  try {
+    const r = await fetch(u, { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + (await r.text()).slice(0, 80));
+    const j = await r.json();
+    out.innerHTML = `<span style="color:var(--ok)">✔ ใช้ได้ — เห็นเครื่องบินรอบกรุงเทพฯ ${(j.aircraft || j.ac || []).length} ลำ</span> · ผ่าน ${u.includes('proxy.php') ? 'XAMPP' : 'Cloudflare Worker'}`;
+  } catch (e) { out.innerHTML = `<span style="color:var(--bad)">✘ ใช้ไม่ได้: ${e.message}</span> — ตรวจลิงก์และว่ากด Deploy โค้ดใหม่แล้ว`; }
+}
+$('#save').onclick = () => {
+  const v = $('#url').value.trim();
+  if (v && !/^https:\/\/[\w.-]+\.workers\.dev\/?$/.test(v)) { toast('ลิงก์ต้องเป็นแบบ https://ชื่อ.xxxx.workers.dev'); return; }
+  store.set('worker', v); test();
+};
+if (workerURL()) test();
+</script>
+</body>
+</html>

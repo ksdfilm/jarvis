@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#01070c">
+<title>AVATAR//MIRROR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../common/lab.css">
+<script type="importmap">{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/" } }</script>
+<style>
+  html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+  body { display: flex; flex-direction: column; }
+  #view { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+  #view > canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .pip { position: absolute; top: 10px; right: 10px; width: min(28vw, 220px); background: #000; border: 1px solid var(--line); overflow: hidden; box-shadow: 0 0 14px rgba(60, 231, 255, .2); }
+  .pip video, .pip canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; }
+  .pip video { opacity: .6; }
+  #hud { position: absolute; left: 10px; top: 10px; font-family: var(--mono); font-size: 12px; color: var(--c); pointer-events: none; width: 170px; }
+  #hud .row { display: flex; align-items: center; gap: 6px; margin: 2px 0; color: var(--dim); }
+  #hud .row span { width: 64px; }
+  #hud .row i { flex: 1; height: 5px; background: rgba(60, 231, 255, .12); position: relative; }
+  #hud .row i b { position: absolute; left: 0; top: 0; bottom: 0; background: var(--c); box-shadow: 0 0 6px var(--c); }
+  #hud .st { color: var(--warn); margin-bottom: 4px; font-size: 13px; }
+  #rec { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font-family: var(--mono); color: var(--bad); font-size: 15px; display: none; text-shadow: 0 0 8px var(--bad); }
+  #rec.on { display: block; animation: lab-blink 1s infinite; }
+  #tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--panel); }
+  #tools .sp { flex: 1; }
+  #btnRec.on { background: var(--bad); border-color: var(--bad); color: #fff; box-shadow: 0 0 16px rgba(255, 77, 109, .5); }
+  #clip { position: fixed; inset: 0; z-index: 95; display: none; place-items: center; background: rgba(1, 7, 12, .9); padding: 16px; }
+  #clip.show { display: grid; }
+  #clip .panel { width: min(520px, 100%); }
+  #clip video { width: 100%; max-height: 55vh; background: #000; border: 1px solid var(--line); }
+  #clip .seg { margin-top: 10px; }
+  .lab-gate a.alt { display: inline-block; margin-top: 6px; color: var(--c); }
+  @media (max-width: 700px) {
+    #hud { width: 132px; font-size: 11px; }
+    #hud .row span { width: 50px; }
+    #tools .btn { padding: 7px 9px; font-size: 14px; }
+  }
+</style>
+</head>
+<body class="scanlines">
+<div id="view">
+  <div id="hud"></div>
+  <div id="rec">● REC 0:00</div>
+</div>
+<div id="tools">
+  <button class="btn" id="btnCam">📷 กล้อง</button>
+  <button class="btn" id="btnPose">🦾 ขยับแขน</button>
+  <span class="sp"></span>
+  <button class="btn" id="btnRec">⏺ อัดคลิป</button>
+</div>
+<div id="clip"><div class="panel">
+  <h2>คลิป Avatar</h2>
+  <video id="clipVid" controls playsinline loop></video>
+  <p class="note" id="clipInfo"></p>
+  <div class="seg"><a class="btn primary" id="clipDl" download>⬇ ดาวน์โหลด</a><button class="btn" id="clipShare" hidden>📤 แชร์</button><button class="btn" id="clipClose">✕ ปิด</button></div>
+</div></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

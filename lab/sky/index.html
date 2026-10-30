@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#01070c">
+<title>SKY//AR — ส่องท้องฟ้า</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../common/lab.css">
+<link rel="stylesheet" href="sky.css">
+</head>
+<body>
+<div id="stage" class="stage">
+  <video id="vid" playsinline muted autoplay></video>
+  <canvas id="cv"></canvas>
+  <div id="chips">
+    <div class="chip" id="chipLoc">📍 --</div>
+    <div class="chip" id="chipSat" hidden></div>
+    <div class="chip warn" id="chipCal" hidden></div>
+  </div>
+  <div id="readout" class="mono">--</div>
+</div>
+
+<nav id="dock">
+  <button class="btn" id="bFind">🔍 ค้นหา</button>
+  <button class="btn" id="bMode">🧭 เซนเซอร์</button>
+  <button class="btn" id="bSet">⚙ ตั้งค่า</button>
+</nav>
+
+<section id="info" class="panel sheet" hidden>
+  <button class="x btn" data-close>✕</button>
+  <div id="infoBody"></div>
+</section>
+
+<section id="finder" class="panel sheet" hidden>
+  <button class="x btn" data-close>✕</button>
+  <h2>ค้นหาวัตถุบนฟ้า</h2>
+  <input type="text" id="q" placeholder="พิมพ์ชื่อ เช่น ดาวพฤหัส, ISS, Sirius, นายพราน">
+  <div class="seg" id="ftabs">
+    <button class="btn on" data-t="all">ทั้งหมด</button><button class="btn" data-t="planet">ดาวเคราะห์</button><button class="btn" data-t="sat">ดาวเทียม</button><button class="btn" data-t="star">ดาวฤกษ์</button><button class="btn" data-t="con">กลุ่มดาว</button>
+  </div>
+  <div id="flist"></div>
+  <button class="btn wide" id="bClearTarget" hidden>ยกเลิกเป้าหมาย</button>
+</section>
+
+<section id="settings" class="panel sheet" hidden>
+  <button class="x btn" data-close>✕</button>
+  <h2>ตั้งค่า</h2>
+  <div class="grid2">
+    <label><input type="checkbox" data-opt="lines"> เส้นกลุ่มดาว</label>
+    <label><input type="checkbox" data-opt="conNames"> ชื่อกลุ่มดาว</label>
+    <label><input type="checkbox" data-opt="starNames"> ชื่อดาวฤกษ์</label>
+    <label><input type="checkbox" data-opt="sats"> ดาวเทียม</label>
+    <label><input type="checkbox" data-opt="grid"> เส้นมุมเงย</label>
+    <label><input type="checkbox" data-opt="below"> แสดงใต้ขอบฟ้า</label>
+  </div>
+  <label class="row">ดาวสว่างถึงแมกนิจูด <b id="vMag"></b><input type="range" id="sMag" min="1" max="4.5" step="0.5"></label>
+  <label class="row">ขนาดภาพกล้อง (FOV ด้านยาว) <b id="vFov"></b><input type="range" id="sFov" min="40" max="90" step="1"></label>
+  <label class="row">ปรับทิศเข็มทิศเอง <b id="vNudge"></b><input type="range" id="sNudge" min="-45" max="45" step="1"></label>
+  <label class="row">เวลา (เลื่อนดูล่วงหน้า/ย้อนหลัง) <b id="vTime"></b><input type="range" id="sTime" min="-720" max="720" step="10"></label>
+  <label class="row">ตำแหน่ง
+    <select id="selLoc"></select>
+  </label>
+  <p class="note">ความแม่นยำขึ้นกับเข็มทิศของมือถือ (มักคลาด 5–15°) — ถ้าตำแหน่งดาวเลื่อนไป ให้โบกมือถือเป็นเลข 8 เพื่อคาลิเบรต หรือใช้ “ปรับทิศเอง” โดยเล็งดวงจันทร์/ดาวสว่างที่รู้จัก</p>
+</section>
+
+<script type="module" src="sky.js"></script>
+</body>
+</html>

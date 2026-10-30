@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#01070c">
+<title>SEISMO//LAB — เครื่องวัดแรงสั่น</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../common/lab.css">
+<style>
+  main { max-width: 1400px; margin: 0 auto; padding: 10px 12px calc(24px + env(safe-area-inset-bottom)); display: grid; gap: 10px; }
+  .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .stat { padding: 8px 10px; position: relative; min-width: 0; }
+  .stat .lbl { color: var(--dim); font-size: 12px; }
+  .stat .v { font-family: var(--mono); font-size: 28px; color: var(--c); line-height: 1.15; white-space: nowrap; }
+  .stat .v small { font-size: 13px; color: var(--dim); margin-left: 3px; }
+  .stat .s { font-size: 12px; color: var(--c2); line-height: 1.35; }
+  .stat .mini { position: absolute; right: 6px; top: 6px; padding: 2px 8px; font-size: 12px; }
+  #mmiBox { transition: background .3s; }
+  #mmiBox .v { font-size: 30px; }
+  .plot { padding: 0; position: relative; }
+  .plot canvas { display: block; width: 100%; }
+  #seis { height: 280px; }
+  #spec { height: 170px; }
+  .plot .cap { position: absolute; left: 8px; top: 4px; font-size: 12px; color: var(--dim); pointer-events: none; }
+  .plot .cap b { color: var(--c2); font-weight: 600; }
+  .status { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 13px; color: var(--dim); }
+  .status .mono { color: var(--c2); }
+  #state { padding: 3px 10px; border: 1px solid var(--line); color: var(--ok); }
+  #state.trig { color: #001018; background: var(--bad); border-color: var(--bad); animation: lab-blink .6s infinite; }
+  #state.warm { color: var(--warn); }
+  .ratio { width: 120px; height: 8px; background: #000; border: 1px solid var(--line); position: relative; }
+  .ratio i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--c); }
+  .ratio u { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--bad); }
+  .ctrl { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .ctrl .btn { padding: 7px 10px; font-size: 14px; }
+  .ctrl label { font-size: 14px; display: flex; align-items: center; gap: 6px; }
+  #log { display: flex; flex-direction: column; gap: 2px; max-height: 280px; overflow: auto; }
+  .ev { display: grid; grid-template-columns: 70px 1fr auto; gap: 8px; font-size: 13px; padding: 6px 2px; border-bottom: 1px solid var(--line); align-items: center; }
+  .ev .t { font-family: var(--mono); color: var(--dim); }
+  .ev .m { font-family: var(--mono); font-size: 16px; padding: 1px 6px; text-align: center; color: #001018; }
+  table.mmi { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.mmi td { padding: 4px 6px; border-bottom: 1px solid rgba(60, 231, 255, .1); vertical-align: top; }
+  table.mmi td:first-child { font-family: var(--mono); width: 44px; text-align: center; color: #001018; }
+  table.mmi tr.cur td { outline: 1px solid var(--c); }
+  details summary { cursor: pointer; color: var(--c); }
+  .simtag { color: var(--pink); border: 1px solid rgba(255, 122, 217, .5); padding: 1px 8px; font-size: 12px; }
+  @media (min-width: 980px) {
+    main { grid-template-columns: minmax(0, 1fr) 380px; align-items: start; }
+    .left { display: grid; gap: 10px; }
+    .right { display: grid; gap: 10px; }
+    #seis { height: 380px; }
+    #spec { height: 220px; }
+  }
+  @media (max-width: 979px) { .left, .right { display: contents; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="left">
+    <div class="stats">
+      <div class="panel stat"><div class="lbl">แรงสั่นตอนนี้ (1 วินาที)</div><div class="v" id="vNow">--</div><div class="s" id="vNowMs"></div></div>
+      <div class="panel stat"><div class="lbl">ค่าสูงสุด (PGA)</div><div class="v" id="vPeak">--</div><div class="s" id="vPeakT"></div><button class="btn mini" id="bResetPeak">รีเซ็ต</button></div>
+      <div class="panel stat" id="mmiBox"><div class="lbl">ความรุนแรง (Mercalli โดยประมาณ)</div><div class="v" id="vMMI">--</div><div class="s" id="vMMId"></div></div>
+      <div class="panel stat"><div class="lbl">ความถี่เด่น</div><div class="v" id="vFreq">--</div><div class="s" id="vFreqS"></div></div>
+    </div>
+    <div class="status">
+      <span id="state" class="warm">กำลังเริ่ม…</span>
+      <span>STA/LTA <span class="mono" id="vRatio">--</span></span><span class="ratio"><i id="ratioBar"></i><u id="ratioOn"></u></span>
+      <span>อัตราสุ่ม <span class="mono" id="vRate">--</span></span>
+      <span id="simTag" class="simtag" hidden>โหมดจำลอง</span>
+    </div>
+    <div class="panel plot"><canvas id="seis"></canvas><div class="cap">ไซสโมกราฟ · <b style="color:#ff6b8b">X</b> <b style="color:#3dff9a">Y</b> <b style="color:#3ce7ff">Z</b> <b style="color:#ffc845">|a|</b> · <span id="scaleLbl"></span></div></div>
+    <div class="panel plot"><canvas id="spec"></canvas><div class="cap">สเปกตรัม FFT (X+Y+Z) · <span id="specLbl"></span></div></div>
+  </div>
+  <div class="right">
+    <div class="panel ctrl">
+      <button class="btn" id="bPause">⏸ หยุดกราฟ</button>
+      <button class="btn" id="bGrav">แสดง: ไม่รวมแรงโน้มถ่วง</button>
+      <button class="btn" id="bWin">ช่วงเวลา 20 วิ</button>
+      <button class="btn" id="bSim">🧪 โหมดจำลอง</button>
+      <label style="width:100%">ความไวตรวจจับ <input type="range" id="sens" min="1" max="5" step="1" style="flex:1"> <b class="mono" id="sensV" style="color:var(--c)"></b></label>
+      <p class="note" style="margin:0">วางมือถือบน <b>พื้นแข็ง/โต๊ะ/ตัวเครื่องจักร</b> ให้นิ่ง ไม่ต้องถือ · หน้าจอจะเปิดค้างไว้ · ความไวสูง = จับแรงสั่นเบาๆ ได้ แต่แจ้งเตือนผิดบ่อยขึ้น</p>
+    </div>
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center"><h2>บันทึกเหตุการณ์สั่นไหว</h2><button class="btn" id="bClearLog" style="padding:4px 10px">ล้าง</button></div>
+      <div id="log"></div>
+    </div>
+    <div class="panel">
+      <details><summary>ตารางความรุนแรง Modified Mercalli (MMI)</summary><table class="mmi" id="mmiTable"></table></details>
+      <details style="margin-top:8px"><summary>ข้อจำกัด / วิธีอ่านค่า</summary>
+        <p class="note">• ใช้ตัววัดความเร่งในมือถือ (~60 ครั้ง/วินาทีบน iPhone) — วัดความถี่ได้ไม่เกิน <b>ครึ่งหนึ่งของอัตราสุ่ม (~30 Hz)</b>. มอเตอร์ 1450 rpm (24 Hz) วัดได้ แต่ 2900 rpm (48 Hz) จะ “สะท้อน” (aliasing) ไปโผล่ที่ ~12 Hz<br>
+        • ระดับ MMI คำนวณจาก PGA ด้วยสูตร Wald et al. (1999) — เป็นค่า <b>ประมาณ</b> ไม่ใช่การวัดแผ่นดินไหวทางการ ข้อมูลทางการดูที่กรมอุตุนิยมวิทยา<br>
+        • ความเร็วสั่น (mm/s) ได้จากการอินทิเกรตสเปกตรัมช่วง 2 Hz ถึงครึ่งอัตราสุ่ม — ใช้ <b>เปรียบเทียบเครื่องเดิมตามเวลา</b> (แนวโน้ม) ไม่ใช่ค่ามาตรฐาน ISO 10816 ซึ่งต้องวัด 10–1000 Hz<br>
+        • ตัวเครื่องมือถือมีสัญญาณรบกวนราว 0.001–0.003 g — แรงสั่นที่ต่ำกว่านั้นวัดไม่ได้</p>
+      </details>
+    </div>
+  </div>
+</main>
+<script type="module">
+import { bar, gate, wakeLock, store, toast, isIOS, $, $$, clamp } from '../common/lab.js';
+bar('SEISMO//LAB', 'เครื่องวัดแผ่นดินไหว / แรงสั่นเครื่องจักร');
+const G = 9.80665;
+
+// ---------- MMI ----------
+const MMI = [
+  ['I', 'ไม่รู้สึก', 'ตรวจวัดได้ด้วยเครื่องมือเท่านั้น', '#cfe9ef'],
+  ['II', 'อ่อนมาก', 'รู้สึกได้เฉพาะคนที่อยู่นิ่งๆ โดยเฉพาะชั้นบนของอาคาร', '#bfe6ff'],
+  ['III', 'อ่อน', 'รู้สึกได้ในอาคาร คล้ายรถบรรทุกเล็กวิ่งผ่าน ของแขวนแกว่งเล็กน้อย', '#9ff5ff'],
+  ['IV', 'ปานกลาง', 'คนในอาคารส่วนใหญ่รู้สึก จาน หน้าต่าง ประตูสั่นมีเสียง', '#7dffc7'],
+  ['V', 'ค่อนข้างแรง', 'เกือบทุกคนรู้สึก คนนอนหลับตื่น ของเล็กๆ ล้ม น้ำในภาชนะกระฉอก', '#ffe76a'],
+  ['VI', 'แรง', 'ทุกคนรู้สึก เดินลำบาก เฟอร์นิเจอร์หนักเลื่อน ปูนฉาบร้าว', '#ffc845'],
+  ['VII', 'แรงมาก', 'ยืนลำบาก อาคารที่ออกแบบไม่ดีเสียหายปานกลาง', '#ff9a3c'],
+  ['VIII', 'รุนแรง', 'อาคารทั่วไปเสียหายบางส่วน ปล่องควัน/เสา/กำแพงพัง', '#ff6b4a'],
+  ['IX', 'รุนแรงมาก', 'อาคารเสียหายหนัก ฐานรากเคลื่อน พื้นดินแตก', '#ff4d6d'],
+  ['X+', 'รุนแรงที่สุด', 'อาคารส่วนใหญ่พังทลาย', '#d6336c'],
+];
+// Wald et al. (1999): PGA in cm/s²
+function mmiFromPga(g) {
+  const gal = Math.max(g * G * 100, 1e-6);
+  let m = 3.66 * Math.log10(gal) - 1.66;
+  if (m < 5) m = 2.20 * Math.log10(gal) + 1.00;
+  return clamp(m, 1, 10);
+}
+const mmiIdx = m => clamp(Math.floor(m + 0.5) - 1, 0, 9);
+$('#mmiTable').innerHTML = MMI.map((r, i) => `<tr data-i="${i}"><td style="background:${r[3]}">${r[0]}</td><td><b>${r[1]}</b> — ${r[2]}</td></tr>`).join('');
+
+// ---------- settings ----------
+const SENS = [  // [STA/LTA on-ratio, minimum STA level in g]
+  [6.0, 0.012], [4.5, 0.006], [3.5, 0.003], [2.8, 0.0015], [2.2, 0.0008],
+];
+let sens = store.get('seismo.sens', 3);
+$('#sens').value = sens;
+const updSens = () => { sens = +$('#sens').value; store.set('seismo.sens', sens); $('#sensV').textContent = ['ต่ำมาก', 'ต่ำ', 'กลาง', 'สูง', 'สูงมาก'][sens - 1]; };
+$('#sens').oninput = updSens; updSens();
+const WINS = [10, 20, 60]; let winIdx = 1;
+$('#bWin').onclick = () => { winIdx = (winIdx + 1) % WINS.length; $('#bWin').textContent = `ช่วงเวลา ${WINS[winIdx]} วิ`; };
+let showGrav = false;
+$('#bGrav').onclick = () => { showGrav = !showGrav; $('#bGrav').textContent = 'แสดง: ' + (showGrav ? 'รวมแรงโน้มถ่วง' : 'ไม่รวมแรงโน้มถ่วง'); $('#bGrav').classList.toggle('on', showGrav); };
+let paused = false;
+$('#bPause').onclick = () => { paused = !paused; $('#bPause').textContent = paused ? '▶ เดินกราฟต่อ' : '⏸ หยุดกราฟ'; $('#bPause').classList.toggle('on', paused); };
+
+// ---------- buffers ----------
+const N = 6000;   // ~100 s at 60 Hz
+const buf = { t: new Float64Array(N), x: new Float32Array(N), y: new Float32Array(N), z: new Float32Array(N), m: new Float32Array(N), gx: new Float32Array(N), gy: new Float32Array(N), gz: new Float32Array(N), trig: new Uint8Array(N) };
+let head = 0, count = 0;
+let fs = 60;                      // estimated sample rate
+const rateTimes = [];
+let bias = [0, 0, 0], biasInit = false, lp = null;
+let peak = 0, peakT = null, sta = 0, lta = 0, ltaN = 0, trig = null, belowSince = 0;
+let started = 0;
+const events = store.get('seismo.events', []);
+
+// one accelerometer sample: linear accel (m/s², may be null) + accel incl. gravity
+function sample(t, lin, grav) {
+  rateTimes.push(t); while (rateTimes.length && t - rateTimes[0] > 2000) rateTimes.shift();
+  if (rateTimes.length > 10) fs = (rateTimes.length - 1) / ((t - rateTimes[0]) / 1000);
+  let a;
+  if (lin && lin.x != null) a = [lin.x, lin.y, lin.z];
+  else if (grav && grav.x != null) {   // no linear accel → high-pass the gravity signal
+    const gv = [grav.x, grav.y, grav.z];
+    if (!lp) lp = [...gv];
+    const k = 0.02; lp = lp.map((v, i) => v + k * (gv[i] - v));
+    a = gv.map((v, i) => v - lp[i]);
+  } else return;
+  // remove slow sensor bias (≈3 s time constant)
+  if (!biasInit) { bias = [...a]; biasInit = true; }
+  const kb = 1 / (3 * fs); bias = bias.map((b, i) => b + kb * (a[i] - b));
+  const x = (a[0] - bias[0]) / G, y = (a[1] - bias[1]) / G, z = (a[2] - bias[2]) / G;
+  const m = Math.hypot(x, y, z);
+  const i = head;
+  buf.t[i] = t; buf.x[i] = x; buf.y[i] = y; buf.z[i] = z; buf.m[i] = m;
+  buf.gx[i] = (grav?.x ?? 0) / G; buf.gy[i] = (grav?.y ?? 0) / G; buf.gz[i] = (grav?.z ?? 0) / G;
+  head = (head + 1) % N; count = Math.min(count + 1, N);
+  // ignore the first second (filters settling)
+  if (t - started < 1500) { buf.trig[i] = 0; return; }
+  if (m > peak) { peak = m; peakT = new Date(); }
+  // STA/LTA on the energy
+  const cf = m * m, nS = 0.5 * fs, nL = 10 * fs;
+  sta += (cf - sta) / nS;
+  if (!trig) { ltaN++; lta += (cf - lta) / Math.min(ltaN, nL); }
+  const [on, minG] = SENS[sens - 1];
+  const ratio = sta / Math.max(lta, 1e-12);
+  curRatio = ratio;
+  const warm = ltaN < 5 * fs;
+  if (!trig && !warm && ratio > on && Math.sqrt(sta) > minG) {
+    trig = { start: new Date(), t0: t, peak: 0 }; belowSince = 0;
+    navigator.vibrate?.([80, 40, 80]);
+  }
+  if (trig) {
+    trig.peak = Math.max(trig.peak, m);
+    if (ratio < 1.5) { if (!belowSince) belowSince = t; else if (t - belowSince > 1500) endEvent(t); }
+    else belowSince = 0;
+    if (trig && t - trig.t0 > 120e3) endEvent(t);
+  }
+  buf.trig[i] = trig ? 1 : 0;
+}
+let curRatio = 0;
+function endEvent(t) {
+  const ev = { t: trig.start.getTime(), dur: (t - trig.t0) / 1000, peak: trig.peak, mmi: mmiFromPga(trig.peak), f: domF, sim: simOn };
+  events.unshift(ev); events.length = Math.min(events.length, 200);
+  store.set('seismo.events', events); trig = null; lta = Math.max(lta, sta * 0.5); renderLog();
+}
+function renderLog() {
+  $('#log').innerHTML = events.length ? events.map(e => {
+    const k = mmiIdx(e.mmi);
+    return `<div class="ev"><span class="t">${new Date(e.t).toLocaleTimeString('th-TH')}<br><small>${new Date(e.t).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}</small></span>
+      <span>${e.sim ? '🧪 ' : ''}สูงสุด <b class="mono">${fmtG(e.peak)}</b> · นาน ${e.dur.toFixed(1)} วิ${e.f ? ` · ${e.f.toFixed(1)} Hz` : ''}<br><small style="color:var(--dim)">${MMI[k][1]}</small></span>
+      <span class="m" style="background:${MMI[k][3]}">${MMI[k][0]}</span></div>`;
+  }).join('') : '<p class="note">ยังไม่มีเหตุการณ์ — ระบบจะบันทึกอัตโนมัติเมื่อแรงสั่นสูงขึ้นผิดปกติ (STA/LTA)</p>';
+}
+renderLog();
+$('#bClearLog').onclick = () => { if (events.length && confirm('ล้างบันทึกทั้งหมด?')) { events.length = 0; store.set('seismo.events', events); renderLog(); } };
+$('#bResetPeak').onclick = () => { peak = 0; peakT = null; };
+const fmtG = g => g >= 0.1 ? g.toFixed(3) + ' g' : g >= 0.001 ? (g * 1000).toFixed(1) + ' mg' : (g * 1000).toFixed(2) + ' mg';
+
+// ---------- sensor input ----------
+let gotMotion = false;
+addEventListener('devicemotion', e => {
+  if (simOn) return;
+  if (e.acceleration?.x == null && e.accelerationIncludingGravity?.x == null) return;
+  gotMotion = true;
+  sample(performance.now(), e.acceleration, e.accelerationIncludingGravity);
+});
+
+// ---------- simulator ----------
+let simOn = false, simTimer = null, simT0 = 0, simLast = 0, quakeAt = 0;
+function gauss() { return Math.sqrt(-2 * Math.log(Math.random() + 1e-12)) * Math.cos(2 * Math.PI * Math.random()); }
+function setSim(on) {
+  simOn = on; $('#simTag').hidden = !on; $('#bSim').classList.toggle('on', on);
+  clearInterval(simTimer);
+  if (on) {
+    simT0 = simLast = performance.now(); quakeAt = 8000;
+    simTimer = setInterval(() => {
+      const nowT = performance.now();
+      while (simLast + 1000 / 60 <= nowT) {
+        simLast += 1000 / 60;
+        const ts = (simLast - simT0) / 1000;
+        // machine: 1460 rpm motor (24.33 Hz) + 2× harmonic aliasing, plus sensor noise
+        let x = 0.004 * Math.sin(2 * Math.PI * 24.33 * ts) + 0.0008 * gauss();
+        let y = 0.002 * Math.sin(2 * Math.PI * 24.33 * ts + 1) + 0.0008 * gauss();
+        let z = 0.001 * Math.sin(2 * Math.PI * 12.1 * ts) + 0.0008 * gauss();
+        // a synthetic quake every ~30 s: P (fast, small) then S (3 Hz, larger)
+        const q = ts * 1000 - quakeAt;
+        if (q > 0 && q < 14000) {
+          const s = q / 1000, envP = s < 2 ? Math.sin(Math.PI * s / 2) : 0, envS = s > 2 ? Math.exp(-(s - 2) / 3) * Math.min(1, (s - 2) * 2) : 0;
+          x += 0.01 * envP * Math.sin(2 * Math.PI * 7 * s) + 0.06 * envS * Math.sin(2 * Math.PI * 2.8 * s);
+          y += 0.008 * envP * Math.sin(2 * Math.PI * 6 * s + 2) + 0.045 * envS * Math.sin(2 * Math.PI * 3.3 * s + 1);
+          z += 0.02 * envP * Math.sin(2 * Math.PI * 8 * s) + 0.02 * envS * Math.sin(2 * Math.PI * 2.5 * s);
+        } else if (q >= 14000) quakeAt = ts * 1000 + 22000 + Math.random() * 15000;
+        sample(simLast, { x: x * G, y: y * G, z: z * G }, { x: x * G, y: y * G, z: (z - 1) * G });
+      }
+    }, 16);
+  }
+}
+$('#bSim').onclick = () => { setSim(!simOn); toast(simOn ? 'โหมดจำลอง: มอเตอร์ 1460 rpm + แผ่นดินไหวจำลองทุก ~30 วิ' : 'กลับไปใช้เซนเซอร์จริง'); };
+
+// ---------- FFT ----------
+let domF = 0, spec = null, vRms = 0;
+function fft(re, im) {   // in-place radix-2
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) { let bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit; if (i < j) { [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; } }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = -2 * Math.PI / len, wr = Math.cos(ang), wi = Math.sin(ang);
+    for (let i = 0; i < n; i += len) {
+      let cr = 1, ci = 0;
+      for (let j = 0; j < len / 2; j++) {
+        const a = i + j, b = a + len / 2, tr = re[b] * cr - im[b] * ci, ti = re[b] * ci + im[b] * cr;
+        re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti;
+        const nr = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = nr;
+      }
+    }
+  }
+}
+function computeSpectrum() {
+  const n = fs > 90 ? 512 : 256;
+  if (count < n) return;
+  const P = new Float32Array(n / 2), A = new Float32Array(n / 2);
+  for (const k of ['x', 'y', 'z']) {
+    const re = new Float32Array(n), im = new Float32Array(n), arr = buf[k];
+    let mean = 0; for (let i = 0; i < n; i++) mean += arr[(head - n + i + N) % N]; mean /= n;
+    for (let i = 0; i < n; i++) re[i] = (arr[(head - n + i + N) % N] - mean) * (0.5 - 0.5 * Math.cos(2 * Math.PI * i / (n - 1)));
+    fft(re, im);
+    for (let i = 0; i < n / 2; i++) P[i] += re[i] * re[i] + im[i] * im[i];
+  }
+  // amplitude (g, peak) with Hann coherent gain 0.5
+  for (let i = 0; i < n / 2; i++) A[i] = 2 * Math.sqrt(P[i]) / (n * 0.5);
+  const df = fs / n;
+  let bi = 0, bv = 0;
+  const i0 = Math.max(1, Math.ceil(0.5 / df));
+  for (let i = i0; i < n / 2 - 1; i++) if (A[i] > bv) { bv = A[i]; bi = i; }
+  // parabolic interpolation of the peak
+  let f = bi * df;
+  if (bi > 0) { const a = A[bi - 1], b = A[bi], c = A[bi + 1], d = (a - c) / (2 * (a - 2 * b + c) || 1); f = (bi + clamp(d, -0.5, 0.5)) * df; }
+  // noise floor check: peak must stand clearly above the median
+  const sorted = [...A.slice(i0)].sort((p, q) => p - q), med = sorted[sorted.length >> 1] || 1e-9;
+  domF = bv > med * 4 && bv > 0.0004 ? f : 0;
+  // velocity RMS (mm/s) from 2 Hz to Nyquist: v = a / (2πf); Hann ENBW 1.5
+  let v2 = 0;
+  for (let i = Math.ceil(2 / df); i < n / 2; i++) { const v = A[i] * G * 1000 / (2 * Math.PI * i * df); v2 += v * v / 2; }
+  vRms = Math.sqrt(v2 / 1.5);
+  spec = { A, df, n, peakAmp: bv };
+}
+
+// ---------- drawing ----------
+const cvS = $('#seis'), cvF = $('#spec');
+function fit(cv) { const d = Math.min(devicePixelRatio || 1, 2), w = cv.clientWidth, h = cv.clientHeight; if (cv.width !== w * d || cv.height !== h * d) { cv.width = w * d; cv.height = h * d; } const c = cv.getContext('2d'); c.setTransform(d, 0, 0, d, 0, 0); return [c, w, h]; }
+let frozen = null, scale = 0.01;
+function drawSeis() {
+  const [c, w, h] = fit(cvS);
+  c.clearRect(0, 0, w, h);
+  if (!count) return;
+  const win = WINS[winIdx] * 1000;
+  const tEnd = paused ? (frozen ??= buf.t[(head - 1 + N) % N]) : (frozen = null, buf.t[(head - 1 + N) % N]);
+  const tStart = tEnd - win;
+  const lanes = showGrav ? [['gx', '#ff6b8b', 'X'], ['gy', '#3dff9a', 'Y'], ['gz', '#3ce7ff', 'Z']] : [['x', '#ff6b8b', 'X'], ['y', '#3dff9a', 'Y'], ['z', '#3ce7ff', 'Z'], ['m', '#ffc845', '|a|']];
+  const top = 20, lh = (h - top - 16) / lanes.length;
+  // auto scale (per view) on the dynamic data
+  if (!showGrav) {
+    let mx = 0;
+    for (let k = 0; k < count; k++) { const i = (head - 1 - k + N) % N; if (buf.t[i] < tStart) break; if (buf.t[i] <= tEnd) mx = Math.max(mx, buf.m[i]); }
+    const target = Math.max(0.003, mx * 1.15);
+    scale = target > scale ? target : scale + (target - scale) * 0.03;
+  }
+  // event shading + time grid
+  const X = t => (t - tStart) / win * w;
+  c.fillStyle = 'rgba(255,77,109,.14)';
+  let runStart = null;
+  for (let k = count - 1; k >= 0; k--) {
+    const i = (head - 1 - k + N) % N; const t = buf.t[i]; if (t < tStart || t > tEnd) continue;
+    if (buf.trig[i] && runStart == null) runStart = t;
+    if (!buf.trig[i] && runStart != null) { c.fillRect(X(runStart), top, X(t) - X(runStart), h - top - 16); runStart = null; }
+  }
+  if (runStart != null) c.fillRect(X(runStart), top, w - X(runStart), h - top - 16);
+  c.strokeStyle = 'rgba(60,231,255,.08)'; c.fillStyle = 'rgba(91,143,158,.9)'; c.font = '10px "Share Tech Mono"'; c.textAlign = 'center'; c.lineWidth = 1;
+  const step = win > 30e3 ? 10e3 : win > 15e3 ? 5e3 : 2e3;
+  for (let t = Math.ceil(tStart / step) * step; t <= tEnd; t += step) { const x = X(t); c.beginPath(); c.moveTo(x, top); c.lineTo(x, h - 16); c.stroke(); c.fillText(`-${((tEnd - t) / 1000).toFixed(0)}s`, x, h - 4); }
+  lanes.forEach(([k, col, name], li) => {
+    const y0 = top + lh * li + lh / 2;
+    let s, off = 0;
+    if (showGrav) { s = 1.2; } else s = k === 'm' ? scale : scale;
+    const isMag = k === 'm';
+    const base = isMag ? y0 + lh * 0.42 : y0;
+    c.strokeStyle = 'rgba(60,231,255,.15)'; c.beginPath(); c.moveTo(0, base); c.lineTo(w, base); c.stroke();
+    c.strokeStyle = col; c.lineWidth = 1.2; c.beginPath();
+    let first = true;
+    for (let k2 = Math.min(count, N) - 1; k2 >= 0; k2--) {
+      const i = (head - 1 - k2 + N) % N; const t = buf.t[i]; if (t < tStart || t > tEnd) continue;
+      const v = buf[k][i];
+      const y = isMag ? base - v / s * lh * 0.84 : y0 - v / s * lh * 0.46;
+      first ? c.moveTo(X(t), y) : c.lineTo(X(t), y); first = false;
+    }
+    c.stroke();
+    c.fillStyle = col; c.textAlign = 'left'; c.font = '11px "Share Tech Mono"'; c.fillText(name, 4, y0 - lh / 2 + 12);
+  });
+  $('#scaleLbl').textContent = showGrav ? 'สเกล ±1.2 g' : `สเกล ±${fmtG(scale)}`;
+}
+function drawSpec() {
+  const [c, w, h] = fit(cvF);
+  c.clearRect(0, 0, w, h);
+  if (!spec) return;
+  const { A, df, n } = spec, fmax = fs / 2, top = 22, bot = 18, ph = h - top - bot;
+  const mx = Math.max(...A.slice(1)) * 1.15 || 1e-6;
+  c.strokeStyle = 'rgba(60,231,255,.1)'; c.fillStyle = 'rgba(91,143,158,.9)'; c.font = '10px "Share Tech Mono"'; c.textAlign = 'center';
+  for (let f = 0; f <= fmax; f += 5) { const x = f / fmax * w; c.beginPath(); c.moveTo(x, top); c.lineTo(x, h - bot); c.stroke(); c.fillText(f + 'Hz', clamp(x, 14, w - 16), h - 5); }
+  const grad = c.createLinearGradient(0, top, 0, h - bot); grad.addColorStop(0, 'rgba(60,231,255,.55)'); grad.addColorStop(1, 'rgba(60,231,255,.05)');
+  c.fillStyle = grad; c.strokeStyle = '#3ce7ff'; c.lineWidth = 1.3;
+  c.beginPath(); c.moveTo(0, h - bot);
+  for (let i = 0; i < n / 2; i++) c.lineTo(i * df / fmax * w, h - bot - A[i] / mx * ph);
+  c.lineTo(w, h - bot); c.closePath(); c.fill(); c.stroke();
+  if (domF) {
+    const x = domF / fmax * w;
+    c.strokeStyle = '#ffc845'; c.setLineDash([4, 4]); c.beginPath(); c.moveTo(x, top); c.lineTo(x, h - bot); c.stroke(); c.setLineDash([]);
+    c.fillStyle = '#ffc845'; c.textAlign = x > w - 120 ? 'right' : 'left'; c.font = '12px "Share Tech Mono"';
+    c.fillText(`${domF.toFixed(2)} Hz · ${Math.round(domF * 60)} rpm`, x + (x > w - 120 ? -6 : 6), top + 12);
+  }
+  $('#specLbl').textContent = `ความละเอียด ${df.toFixed(2)} Hz · สูงสุด ${fmax.toFixed(0)} Hz`;
+}
+
+// ---------- stats ----------
+function updStats() {
+  if (!count) return;
+  const tNow = buf.t[(head - 1 + N) % N];
+  let mNow = 0;
+  for (let k = 0; k < count; k++) { const i = (head - 1 - k + N) % N; if (tNow - buf.t[i] > 1000) break; mNow = Math.max(mNow, buf.m[i]); }
+  $('#vNow').innerHTML = fmtG(mNow).replace(/ (m?g)$/, '<small>$1</small>');
+  $('#vNowMs').textContent = `${(mNow * G).toFixed(3)} m/s² · ${(mNow * G * 100).toFixed(1)} gal`;
+  $('#vPeak').innerHTML = fmtG(peak).replace(/ (m?g)$/, '<small>$1</small>');
+  $('#vPeakT').textContent = peakT ? 'เมื่อ ' + peakT.toLocaleTimeString('th-TH') : '';
+  // outside an event, readings within ~3σ of the background are sensor noise / normal hum, not shaking
+  const bg = 3 * Math.sqrt(lta), quiet = !trig && mNow < Math.max(bg, 0.002);
+  const m = quiet ? 1 : mmiFromPga(trig ? trig.peak : mNow), k = mmiIdx(m);
+  $('#vMMI').innerHTML = `${MMI[k][0]}<small>${quiet ? 'พื้นหลัง' : m.toFixed(1)}</small>`;
+  $('#vMMI').style.color = MMI[k][3];
+  $('#vMMId').textContent = quiet ? 'ระดับพื้นหลัง — สัญญาณรบกวนของเซนเซอร์/การสั่นปกติ ไม่ใช่แผ่นดินไหว' : `${MMI[k][1]} — ${MMI[k][2]}`;
+  $('#mmiBox').style.background = k >= 4 ? 'rgba(255,77,109,.18)' : '';
+  $$('#mmiTable tr').forEach(r => r.classList.toggle('cur', +r.dataset.i === k));
+  $('#vFreq').innerHTML = domF ? `${domF.toFixed(1)}<small>Hz</small>` : '—';
+  $('#vFreqS').innerHTML = domF ? `${Math.round(domF * 60)} rpm · ความเร็วสั่น ~${vRms.toFixed(2)} mm/s` : `ไม่มีความถี่เด่น · ~${vRms.toFixed(2)} mm/s`;
+  $('#vRate').textContent = fs.toFixed(0) + ' Hz';
+  const [on] = SENS[sens - 1], warm = ltaN < 5 * fs;
+  $('#vRatio').textContent = curRatio.toFixed(1);
+  $('#ratioBar').style.width = clamp(curRatio / (on * 1.5) * 100, 0, 100) + '%';
+  $('#ratioOn').style.left = (100 / 1.5) + '%';
+  const st = $('#state');
+  st.className = trig ? 'trig' : warm ? 'warm' : '';
+  st.textContent = trig ? '⚠ ตรวจพบแรงสั่น!' : warm ? `กำลังเรียนรู้ระดับพื้นหลัง… ${Math.max(0, Math.ceil(5 - ltaN / fs))} วิ` : '● เฝ้าระวัง';
+}
+let lastSpec = 0, lastStat = 0;
+function loop(t) {
+  requestAnimationFrame(loop);
+  if (t - lastSpec > 250) { computeSpectrum(); lastSpec = t; drawSpec(); }
+  if (t - lastStat > 150) { updStats(); lastStat = t; }
+  drawSeis();
+}
+
+// ---------- start ----------
+const phone = isIOS() || /Android/i.test(navigator.userAgent) || matchMedia('(pointer: coarse)').matches;
+await gate({
+  title: 'SEISMO//LAB',
+  lines: [
+    'วางมือถือนิ่งๆ บนโต๊ะ พื้น หรือบนตัวเครื่องจักร แล้วดูแรงสั่นแบบไซสโมกราฟ 3 แกน',
+    'บอกค่าแรงสั่นสูงสุด (g), ระดับความรุนแรง Mercalli โดยประมาณ, ความถี่เด่น (Hz/rpm) ของเครื่องจักร',
+    'ตรวจจับเหตุการณ์สั่นไหวอัตโนมัติ (STA/LTA) และบันทึกไว้ในเครื่อง',
+    phone ? 'ต้องอนุญาต: เซนเซอร์การเคลื่อนไหว' : 'บนคอมไม่มีเซนเซอร์ — จะเปิด “โหมดจำลอง” ให้ลองดู',
+  ],
+  needs: phone ? ['motion'] : [],
+  button: phone ? '▶ เริ่มวัด' : '▶ เริ่ม (โหมดจำลอง)',
+  async onStart() { wakeLock(); },
+});
+started = performance.now();
+requestAnimationFrame(loop);
+setTimeout(() => {
+  if (!gotMotion && !simOn) {
+    setSim(true);
+    toast(phone ? 'ไม่ได้รับข้อมูลเซนเซอร์ — ตรวจสิทธิ์ “การเคลื่อนไหวและการวางแนว” ใน Safari · ตอนนี้แสดงโหมดจำลอง' : 'ไม่พบเซนเซอร์ (คอมพิวเตอร์) — แสดงโหมดจำลอง', 6000);
+  }
+}, phone ? 2000 : 400);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') wakeLock(); });
+window.__seis = { mmiFromPga, get domF() { return domF; }, get peak() { return peak; }, get fs() { return fs; }, events, setSim, get vRms() { return vRms; } };
+</script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#01070c">
+<title>FACTORY//TWIN</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../common/lab.css">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="app">
+  <div id="scene"></div>
+  <div id="labels"></div>
+  <div id="demo" hidden></div>
+  <div id="kpis"></div>
+  <aside id="side">
+    <div class="side-head"><b id="sideTitle">ภาพรวมโรงงาน</b><button class="btn x" id="sideClose" title="ปิด">✕</button></div>
+    <div id="sideBody"></div>
+  </aside>
+  <div id="tools">
+    <button class="btn" id="btnRotate" title="หมุนอัตโนมัติ">⟳</button>
+    <button class="btn" id="btnExplode" title="แยกชั้น">⇕</button>
+    <button class="btn" id="btnRefresh" title="โหลดข้อมูลใหม่">↻</button>
+  </div>
+</div>
+
+<dialog id="settings">
+  <form method="dialog" class="dlg">
+    <h2>ตั้งค่า Digital Twin</h2>
+    <h3>โซน / ห้อง</h3>
+    <p class="note">ตั้งชื่อ ชั้น ประเภทห้อง และเลือกว่าอุปกรณ์ชนิดไหนจาก NET//RADAR ให้แสดงในโซนนี้ (ชนิดเดียวกันจะไปอยู่โซนแรกที่เลือกไว้)</p>
+    <div id="zoneList"></div>
+    <button type="button" class="btn" id="addZone">＋ เพิ่มโซน</button>
+    <h3>ตำแหน่งสำหรับสภาพอากาศ / PM2.5</h3>
+    <div class="row"><input type="text" id="locQ" placeholder="ค้นหาเมือง เช่น ชลบุรี, Rayong"><button type="button" class="btn" id="locFind">ค้นหา</button></div>
+    <div id="locResults"></div>
+    <div class="row">
+      <label>ชื่อ <input type="text" id="locName"></label>
+      <label>lat <input type="number" step="0.0001" id="locLat"></label>
+      <label>lon <input type="number" step="0.0001" id="locLon"></label>
+    </div>
+    <div class="row end">
+      <button type="button" class="btn" id="resetCfg">คืนค่าเริ่มต้น</button>
+      <button class="btn" value="cancel">ยกเลิก</button>
+      <button class="btn primary" value="ok" id="saveCfg">บันทึก</button>
+    </div>
+  </form>
+</dialog>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#01070c">
+<title>Image AI · KSD LAB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../common/lab.css">
+<style>
+  main { max-width: 1320px; margin: 0 auto; padding: 12px 16px 40px; display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 14px; align-items: start; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; padding: 10px 12px 40px; } }
+  .view { position: relative; display: grid; place-items: center; min-height: 300px; background: rgba(0, 0, 0, .35); border: 1px solid var(--line); padding: 8px; }
+  .empty { text-align: center; padding: 40px 16px; color: var(--dim); }
+  .empty .ic { font-size: 54px; filter: drop-shadow(0 0 12px var(--c)); }
+  .empty .seg { justify-content: center; margin-top: 14px; }
+  .view.drag { border-color: var(--c); box-shadow: 0 0 24px rgba(60, 231, 255, .3) inset; }
+  .scroller { overflow: auto; max-width: 100%; display: none; -webkit-overflow-scrolling: touch; }
+  .has .scroller { display: block; }
+  .has .empty { display: none; }
+  .cmp { position: relative; user-select: none; -webkit-user-select: none; touch-action: pan-y; }
+  .cmp canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .after { position: absolute; inset: 0; clip-path: inset(0 0 0 var(--x, 50%)); }
+  .after.checker { background: repeating-conic-gradient(#1a2b33 0 25%, #0b161c 0 50%) 0 0 / 20px 20px; }
+  .handle { position: absolute; top: 0; bottom: 0; left: var(--x, 50%); width: 2px; margin-left: -1px; background: var(--c); box-shadow: 0 0 10px var(--c); pointer-events: none; }
+  .knob { position: absolute; top: 50%; left: var(--x, 50%); width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; background: rgba(0, 16, 24, .85); border: 2px solid var(--c); display: grid; place-items: center; color: var(--c); font-family: var(--mono); cursor: ew-resize; touch-action: none; box-shadow: 0 0 14px rgba(60, 231, 255, .5); }
+  .tag { position: absolute; top: 8px; font-family: var(--mono); font-size: 11px; padding: 2px 7px; background: rgba(0, 10, 16, .75); border: 1px solid var(--line); pointer-events: none; }
+  .tag.l { left: 8px; } .tag.r { right: 8px; color: var(--c); }
+  .viewbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; font-size: 13px; color: var(--dim); }
+  .viewbar input[type=range] { width: 120px; }
+  #view:not(.has) + .viewbar { display: none; }
+  .viewbar .info { margin-left: auto; font-family: var(--mono); font-size: 12px; }
+  .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 12px; }
+  .tabs .btn { padding: 10px 4px; }
+  .pane { display: none; }
+  .pane.on { display: block; }
+  .field { margin: 10px 0; }
+  .field > label { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px; }
+  .field > label b { font-family: var(--mono); color: var(--c); font-weight: normal; }
+  .field input[type=range] { width: 100%; }
+  input[type=color] { width: 44px; height: 36px; border: 1px solid var(--line); background: #000; padding: 2px; }
+  .swatches { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .swatches button { width: 30px; height: 30px; border: 1px solid var(--line); cursor: pointer; }
+  .prog { height: 4px; background: rgba(60, 231, 255, .12); margin-top: 10px; overflow: hidden; }
+  .prog i { display: block; height: 100%; width: 0; background: var(--c); box-shadow: 0 0 8px var(--c); transition: width .2s; }
+  .status { font-family: var(--mono); font-size: 12px; color: var(--dim); margin-top: 6px; min-height: 1.2em; }
+  .status.err { color: var(--bad); }
+  .status.ok { color: var(--ok); }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 12px; }
+  .actions .primary { grid-column: 1 / -1; }
+  .engine { font-size: 12px; color: var(--warn); margin-top: 6px; }
+</style>
+</head>
+<body class="scanlines">
+<main>
+  <section>
+    <div class="view" id="view">
+      <div class="empty" id="empty">
+        <div class="ic">🎨</div>
+        <p>เลือกรูปภาพ หรือถ่ายรูปใหม่<br><span class="note">ลากไฟล์มาวางที่นี่ก็ได้ · ประมวลผลในเครื่องทั้งหมด ไม่อัปโหลดรูปไปไหน</span></p>
+        <div class="seg">
+          <button class="btn primary big" data-pick="file">🖼 เลือกรูป</button>
+          <button class="btn big" data-pick="cam">📷 ถ่ายรูป</button>
+        </div>
+      </div>
+      <div class="scroller" id="scroller">
+        <div class="cmp" id="cmp">
+          <canvas id="cBefore"></canvas>
+          <div class="after" id="afterWrap"><canvas id="cAfter"></canvas></div>
+          <div class="handle"></div>
+          <div class="knob" id="knob">⇔</div>
+          <span class="tag l">ก่อน</span><span class="tag r" id="tagAfter">หลัง</span>
+        </div>
+      </div>
+    </div>
+    <div class="viewbar">
+      <button class="btn" data-pick="file">🖼 รูปใหม่</button>
+      <button class="btn" data-pick="cam">📷 ถ่าย</button>
+      <label>ซูม <input type="range" id="zoom" min="1" max="4" step="0.25" value="1"></label>
+      <span class="info" id="info"></span>
+    </div>
+    <input type="file" id="file" accept="image/*" hidden>
+    <input type="file" id="cam" accept="image/*" capture="environment" hidden>
+    <input type="file" id="bgFile" accept="image/*" hidden>
+  </section>
+
+  <aside class="panel">
+    <div class="tabs">
+      <button class="btn on" data-tab="bg">✂ พื้นหลัง</button>
+      <button class="btn" data-tab="up">🔍 ขยายภาพ</button>
+      <button class="btn" data-tab="fx">🖌 ฟิลเตอร์</button>
+    </div>
+
+    <div class="pane on" id="pane-bg">
+      <h2>ลบ / เปลี่ยนพื้นหลัง</h2>
+      <p class="sub">AI แยกคนออกจากฉาก (MediaPipe Selfie Multiclass) — เหมาะกับรูปคน/ครึ่งตัว</p>
+      <div class="field"><label>พื้นหลังใหม่</label>
+        <div class="seg" id="bgMode">
+          <button class="btn on" data-v="none">โปร่งใส</button>
+          <button class="btn" data-v="blur">เบลอ</button>
+          <button class="btn" data-v="color">สี</button>
+          <button class="btn" data-v="image">รูปภาพ</button>
+        </div>
+      </div>
+      <div class="field" id="fColor" hidden><label>สีพื้นหลัง</label>
+        <div class="swatches"><input type="color" id="bgColor" value="#0a2a6b">
+          <button style="background:#fff" data-c="#ffffff"></button><button style="background:#1e5bd8" data-c="#1e5bd8"></button>
+          <button style="background:#d81e2b" data-c="#d81e2b"></button><button style="background:#00b140" data-c="#00b140"></button>
+          <button style="background:#01070c" data-c="#01070c"></button></div>
+      </div>
+      <div class="field" id="fBlur" hidden><label>ความเบลอ <b id="vBlur">12</b></label><input type="range" id="blur" min="2" max="40" value="12"></div>
+      <div class="field" id="fImage" hidden><button class="btn wide" id="pickBg">🖼 เลือกรูปพื้นหลัง</button></div>
+      <div class="field"><label>ความคมของขอบ <b id="vEdge">50</b></label><input type="range" id="edge" min="0" max="100" value="50"></div>
+      <div class="field"><label>เกลี่ยขอบ (px) <b id="vFeather">2</b></label><input type="range" id="feather" min="0" max="12" value="2"></div>
+      <button class="btn primary wide" id="runBg">✂ ตัดพื้นหลัง</button>
+    </div>
+
+    <div class="pane" id="pane-up">
+      <h2>ขยายภาพ (Super-resolution)</h2>
+      <div class="field"><label>ขนาด</label>
+        <div class="seg" id="upScale"><button class="btn on" data-v="2">2×</button><button class="btn" data-v="4">4×</button></div></div>
+      <div class="field"><label>วิธี</label>
+        <div class="seg" id="upEngine"><button class="btn on" data-v="ai">AI Swin2SR</button><button class="btn" data-v="canvas">เร็ว (Canvas)</button></div></div>
+      <p class="sub" id="upNote">AI: Swin2SR lightweight ×2 (≈8 MB, รันในเครื่องผ่าน WebGPU/WASM) — ทำทีละบล็อก อาจใช้เวลา 10 วิ – หลายนาทีตามขนาดภาพ · 4× = AI 2× แล้วขยาย Canvas อีก 2× · ภาพใหญ่จะถูกย่อก่อนเข้า AI (มือถือ 768 px, คอม 1024 px)</p>
+      <div class="field"><label>ความคม (unsharp) <b id="vSharp">60</b></label><input type="range" id="sharp" min="0" max="150" value="60"></div>
+      <button class="btn primary wide" id="runUp">🔍 ขยายภาพ</button>
+      <div class="engine" id="engine"></div>
+    </div>
+
+    <div class="pane" id="pane-fx">
+      <h2>ฟิลเตอร์ศิลปะ</h2>
+      <div class="field"><div class="seg" id="fxMode">
+        <button class="btn on" data-v="cartoon">การ์ตูน</button><button class="btn" data-v="sketch">ดินสอ</button>
+        <button class="btn" data-v="poster">โปสเตอร์</button><button class="btn" data-v="neon">นีออน HUD</button></div></div>
+      <div class="field"><label id="lA">ระดับสี <b id="vA">6</b></label><input type="range" id="fxA" min="2" max="12" value="6"></div>
+      <div class="field"><label id="lB">เส้นขอบ <b id="vB">50</b></label><input type="range" id="fxB" min="0" max="100" value="50"></div>
+      <button class="btn primary wide" id="runFx">🖌 ใช้ฟิลเตอร์</button>
+    </div>
+
+    <div class="prog"><i id="bar"></i></div>
+    <div class="status" id="status">รอรูปภาพ</div>
+    <div class="actions">
+      <button class="btn primary" id="dl" disabled>⬇ ดาวน์โหลดผลลัพธ์</button>
+      <button class="btn" id="share" hidden>📤 แชร์/บันทึกรูป</button>
+      <button class="btn" id="chain" disabled>↻ ใช้ผลลัพธ์ทำต่อ</button>
+      <button class="btn" id="reset" disabled>⟲ กลับต้นฉบับ</button>
+    </div>
+  </aside>
+</main>
+
+<script type="module">
+import { bar, vision, MODELS, toast, store, $, $$, sleep, isIOS } from '../common/lab.js';
+
+bar('IMAGE AI', 'ลบพื้นหลัง · ขยายภาพ · ฟิลเตอร์ — ในเครื่อง');
+
+const TF = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/dist/transformers.min.js';
+const SR_MODEL = 'Xenova/swin2SR-lightweight-x2-64';
+const MAX_IN = isIOS() ? 2048 : 3000;   // input downscale (iPhone memory)
+const MAX_OUT_AREA = 16e6;               // iOS canvas area limit is 16.7 MP
+const AI_MAX_IN = isIOS() ? 768 : 1024;
+
+const view = $('#view'), cmp = $('#cmp'), cB = $('#cBefore'), cA = $('#cAfter');
+let src = null, result = null, resultKind = '', original = null;
+const status = (t, cls = '') => { const s = $('#status'); s.textContent = t; s.className = 'status ' + cls; };
+const progress = p => $('#bar').style.width = Math.round(p * 100) + '%';
+const frame = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+const clone = c => { const d = mk(c.width, c.height); d.getContext('2d').drawImage(c, 0, 0); return d; };
+let busy = false;
+async function job(fn) {
+  if (!src) return toast('เลือกรูปก่อน');
+  if (busy) return toast('กำลังประมวลผลอยู่');
+  busy = true; $$('.pane .primary').forEach(b => b.disabled = true);
+  try { await fn(); } catch (e) { console.error(e); status('ผิดพลาด: ' + (e.message || e), 'err'); }
+  finally { busy = false; $$('.pane .primary').forEach(b => b.disabled = false); }
+}
+
+// ---------- load ----------
+$$('[data-pick]').forEach(b => b.onclick = () => $('#' + b.dataset.pick).click());
+for (const id of ['file', 'cam']) $('#' + id).onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) load(f); };
+view.ondragover = e => { e.preventDefault(); view.classList.add('drag'); };
+view.ondragleave = () => view.classList.remove('drag');
+view.ondrop = e => { e.preventDefault(); view.classList.remove('drag'); const f = e.dataTransfer.files[0]; if (f?.type.startsWith('image/')) load(f); };
+
+async function decode(blob) {
+  try { return await createImageBitmap(blob, { imageOrientation: 'from-image' }); }
+  catch {
+    return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('เปิดไฟล์รูปนี้ไม่ได้ (HEIC บางไฟล์ต้องแปลงเป็น JPG ก่อน)')); i.src = URL.createObjectURL(blob); });
+  }
+}
+async function load(blob) {
+  try {
+    status('กำลังเปิดรูป…');
+    const im = await decode(blob);
+    const s = Math.min(1, MAX_IN / Math.max(im.width, im.height));
+    src = mk(Math.round(im.width * s), Math.round(im.height * s));
+    src.getContext('2d').drawImage(im, 0, 0, src.width, src.height);
+    im.close?.();
+    original = src; mask = null; maskFor = null;
+    setResult(null);
+    view.classList.add('has');
+    status(s < 1 ? `ย่อรูปเหลือ ${src.width}×${src.height} เพื่อประหยัดหน่วยความจำ` : `รูป ${src.width}×${src.height}`);
+    $('#reset').disabled = true;
+  } catch (e) { status(e.message, 'err'); }
+}
+window.imagelab = { load, get src() { return src; }, get result() { return result; }, get busy() { return busy; } };
+
+// ---------- compare viewer ----------
+let zoom = 1, xPct = 50;
+function draw() {
+  if (!src) return;
+  const shown = result || src;
+  cB.width = src.width; cB.height = src.height;
+  cB.getContext('2d').drawImage(src, 0, 0);
+  cA.width = shown.width; cA.height = shown.height;
+  cA.getContext('2d').drawImage(shown, 0, 0);
+  $('#afterWrap').classList.toggle('checker', resultKind === 'none');
+  $('#tagAfter').textContent = result ? 'หลัง' : 'ต้นฉบับ';
+  $('#info').textContent = result ? `${src.width}×${src.height} → ${result.width}×${result.height}` : `${src.width}×${src.height}`;
+  layout();
+}
+function layout() {
+  if (!src) return;
+  const vw = view.clientWidth - 18, vh = Math.max(260, Math.min(innerHeight * (innerWidth < 900 ? .62 : .78), 900));
+  const s = Math.min(vw / src.width, vh / src.height);
+  const w = Math.round(src.width * s), h = Math.round(src.height * s);
+  $('#scroller').style.width = w + 'px'; $('#scroller').style.height = h + 'px';
+  cmp.style.width = w * zoom + 'px'; cmp.style.height = h * zoom + 'px';
+}
+addEventListener('resize', layout);
+function setX(clientX) {
+  const r = cmp.getBoundingClientRect();
+  xPct = Math.max(0, Math.min(100, (clientX - r.left) / r.width * 100));
+  cmp.style.setProperty('--x', xPct + '%');
+}
+let dragging = false;
+$('#knob').onpointerdown = e => { dragging = true; $('#knob').setPointerCapture(e.pointerId); e.preventDefault(); };
+$('#knob').onpointermove = e => dragging && setX(e.clientX);
+$('#knob').onpointerup = $('#knob').onpointercancel = () => dragging = false;
+cmp.onclick = e => { if (zoom === 1 && e.target !== $('#knob')) setX(e.clientX); };
+$('#zoom').oninput = e => {
+  const sc = $('#scroller'), old = zoom; zoom = +e.target.value;
+  const cx = (sc.scrollLeft + sc.clientWidth / 2) / old, cy = (sc.scrollTop + sc.clientHeight / 2) / old;
+  layout();
+  sc.scrollLeft = cx * zoom - sc.clientWidth / 2; sc.scrollTop = cy * zoom - sc.clientHeight / 2;
+};
+
+function setResult(c, kind = '') {
+  result = c; resultKind = kind;
+  if (kind !== 'up' && zoom !== 1 && !(kind === 'none' && c && c.width > src.width)) { zoom = 1; $('#zoom').value = 1; }
+  $('#dl').disabled = $('#chain').disabled = !c;
+  $('#share').hidden = !(c && navigator.canShare);
+  draw();
+}
+
+// ---------- tabs & controls ----------
+$$('.tabs .btn').forEach(b => b.onclick = () => {
+  $$('.tabs .btn').forEach(x => x.classList.toggle('on', x === b));
+  $$('.pane').forEach(p => p.classList.toggle('on', p.id === 'pane-' + b.dataset.tab));
+});
+function segGroup(id, onChange) {
+  const g = $('#' + id);
+  g.onclick = e => {
+    const b = e.target.closest('[data-v]'); if (!b) return;
+    $$('[data-v]', g).forEach(x => x.classList.toggle('on', x === b));
+    onChange?.(b.dataset.v);
+  };
+  return () => $('.on', g).dataset.v;
+}
+const live = (id, out) => { const el = $('#' + id); el.addEventListener('input', () => $('#' + out).textContent = el.value); };
+live('blur', 'vBlur'); live('edge', 'vEdge'); live('feather', 'vFeather'); live('sharp', 'vSharp'); live('fxA', 'vA'); live('fxB', 'vB');
+
+const bgMode = segGroup('bgMode', v => {
+  $('#fColor').hidden = v !== 'color'; $('#fBlur').hidden = v !== 'blur'; $('#fImage').hidden = v !== 'image';
+  if (v === 'image' && !bgImage) $('#bgFile').click();
+  if (mask) job(composite);
+});
+const upScale = segGroup('upScale');
+const upEngine = segGroup('upEngine');
+const FX = {
+  cartoon: ['ระดับสี', 2, 12, 6, 'เส้นขอบ', 50], sketch: ['ความเข้มเส้น', 1, 10, 5, 'ความนุ่ม', 50],
+  poster: ['ระดับสี', 2, 8, 4, 'ความสด', 50], neon: ['ความสว่าง', 1, 10, 6, 'เห็นภาพเดิม', 15],
+};
+const fxMode = segGroup('fxMode', v => {
+  const [la, a0, a1, av, lb, bv] = FX[v];
+  $('#lA').firstChild.textContent = la + ' '; $('#fxA').min = a0; $('#fxA').max = a1; $('#fxA').value = av; $('#vA').textContent = av;
+  $('#lB').firstChild.textContent = lb + ' '; $('#fxB').value = bv; $('#vB').textContent = bv;
+});
+$$('.swatches [data-c]').forEach(b => b.onclick = () => { $('#bgColor').value = b.dataset.c; if (mask) job(composite); });
+$('#bgColor').oninput = () => mask && !busy && composite();
+for (const id of ['blur', 'edge', 'feather']) $('#' + id).onchange = () => mask && job(composite);
+let bgImage = null;
+$('#pickBg').onclick = () => $('#bgFile').click();
+$('#bgFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  bgImage = await decode(f); if (mask) job(composite);
+};
+
+// ---------- helpers: blur ----------
+// separable running-sum box blur on a single float channel (3 passes ≈ gaussian)
+function blurChannel(a, w, h, r) {
+  if (r < 1) return a;
+  const t = new Float32Array(a.length);
+  for (let pass = 0; pass < 3; pass++) {
+    for (let y = 0; y < h; y++) {          // horizontal a -> t
+      const o = y * w; let s = 0;
+      for (let x = -r; x <= r; x++) s += a[o + Math.min(w - 1, Math.max(0, x))];
+      for (let x = 0; x < w; x++) {
+        t[o + x] = s / (2 * r + 1);
+        s += a[o + Math.min(w - 1, x + r + 1)] - a[o + Math.max(0, x - r)];
+      }
+    }
+    for (let x = 0; x < w; x++) {          // vertical t -> a
+      let s = 0;
+      for (let y = -r; y <= r; y++) s += t[Math.min(h - 1, Math.max(0, y)) * w + x];
+      for (let y = 0; y < h; y++) {
+        a[y * w + x] = s / (2 * r + 1);
+        s += t[Math.min(h - 1, y + r + 1) * w + x] - t[Math.max(0, y - r) * w + x];
+      }
+    }
+  }
+  return a;
+}
+function blurRGB(d, w, h, r) {   // returns 3 float planes
+  const n = w * h, P = [new Float32Array(n), new Float32Array(n), new Float32Array(n)];
+  for (let i = 0; i < n; i++) { P[0][i] = d[i * 4]; P[1][i] = d[i * 4 + 1]; P[2][i] = d[i * 4 + 2]; }
+  P.forEach(p => blurChannel(p, w, h, r));
+  return P;
+}
+// cheap strong blur for backgrounds: shrink then grow (no ctx.filter needed — Safari)
+function softBlur(c, radius) {
+  const f = Math.max(1, radius / 2.5);
+  const sw = Math.max(4, Math.round(c.width / f)), sh = Math.max(4, Math.round(c.height / f));
+  const small = mk(sw, sh), sx = small.getContext('2d');
+  sx.imageSmoothingQuality = 'high'; sx.drawImage(c, 0, 0, sw, sh);
+  const id = sx.getImageData(0, 0, sw, sh), P = blurRGB(id.data, sw, sh, 2);
+  for (let i = 0; i < sw * sh; i++) { id.data[i * 4] = P[0][i]; id.data[i * 4 + 1] = P[1][i]; id.data[i * 4 + 2] = P[2][i]; }
+  sx.putImageData(id, 0, 0);
+  const out = mk(c.width, c.height), ox = out.getContext('2d');
+  ox.imageSmoothingQuality = 'high'; ox.drawImage(small, 0, 0, c.width, c.height);
+  return out;
+}
+
+// ---------- background removal ----------
+let segmenter = null, mask = null, maskFor = null, maskW = 0, maskH = 0;
+async function getSegmenter() {
+  if (segmenter) return segmenter;
+  status('กำลังโหลดโมเดลแยกคน (≈16 MB ครั้งแรก)…'); progress(.2);
+  segmenter = await vision('ImageSegmenter', {
+    baseOptions: { modelAssetPath: MODELS.selfieSeg },
+    runningMode: 'IMAGE', outputCategoryMask: false, outputConfidenceMasks: true,
+  });
+  return segmenter;
+}
+async function segment() {
+  if (mask && maskFor === src) return;
+  const seg = await getSegmenter();
+  status('AI กำลังแยกคนออกจากพื้นหลัง…'); progress(.5); await frame();
+  const s = Math.min(1, 1024 / Math.max(src.width, src.height));
+  const c = mk(Math.round(src.width * s), Math.round(src.height * s));
+  c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+  const res = seg.segment(c);
+  const bg = res.confidenceMasks[0];
+  maskW = bg.width; maskH = bg.height;
+  const f = bg.getAsFloat32Array();
+  mask = new Float32Array(f.length);
+  for (let i = 0; i < f.length; i++) mask[i] = 1 - f[i];
+  res.close?.();
+  maskFor = src;
+  let cover = 0; for (let i = 0; i < mask.length; i++) cover += mask[i] > .5;
+  if (cover / mask.length < .01) toast('ไม่พบคนในรูป — เครื่องมือนี้ออกแบบมาสำหรับรูปคน', 4000);
+}
+function maskCanvas() {
+  const edge = +$('#edge').value / 100, feather = +$('#feather').value;
+  let m = Float32Array.from(mask);
+  // edge hardness: remap confidence through a smoothstep window that narrows as edge → 1
+  const half = .5 - edge * .45, lo = .5 - half, hi = .5 + half;
+  for (let i = 0; i < m.length; i++) { const t = Math.min(1, Math.max(0, (m[i] - lo) / (hi - lo))); m[i] = t * t * (3 - 2 * t); }
+  const scale = maskW / src.width;
+  if (feather) blurChannel(m, maskW, maskH, Math.max(1, Math.round(feather * scale)));
+  const c = mk(maskW, maskH), x = c.getContext('2d'), id = x.createImageData(maskW, maskH);
+  for (let i = 0; i < m.length; i++) { id.data[i * 4] = id.data[i * 4 + 1] = id.data[i * 4 + 2] = 255; id.data[i * 4 + 3] = m[i] * 255; }
+  x.putImageData(id, 0, 0);
+  return c;
+}
+async function composite() {
+  const mode = bgMode();
+  const W = src.width, H = src.height;
+  const person = mk(W, H), px = person.getContext('2d');
+  px.drawImage(src, 0, 0);
+  px.globalCompositeOperation = 'destination-in';
+  px.imageSmoothingQuality = 'high';
+  px.drawImage(maskCanvas(), 0, 0, W, H);
+  const out = mk(W, H), ox = out.getContext('2d');
+  if (mode === 'color') { ox.fillStyle = $('#bgColor').value; ox.fillRect(0, 0, W, H); }
+  else if (mode === 'blur') ox.drawImage(softBlur(src, +$('#blur').value * Math.max(1, W / 1000)), 0, 0);
+  else if (mode === 'image' && bgImage) {
+    const s = Math.max(W / bgImage.width, H / bgImage.height);
+    ox.drawImage(bgImage, (W - bgImage.width * s) / 2, (H - bgImage.height * s) / 2, bgImage.width * s, bgImage.height * s);
+  }
+  ox.drawImage(person, 0, 0);
+  setResult(out, mode === 'image' && !bgImage ? 'none' : mode);
+  progress(1);
+  status({ none: 'ตัดพื้นหลังแล้ว → PNG โปร่งใส ✓', blur: 'เบลอพื้นหลังแล้ว ✓', color: 'เปลี่ยนสีพื้นหลังแล้ว ✓', image: bgImage ? 'เปลี่ยนรูปพื้นหลังแล้ว ✓' : 'เลือกรูปพื้นหลังก่อน (ตอนนี้โปร่งใส)' }[mode], 'ok');
+}
+$('#runBg').onclick = () => job(async () => { await segment(); await composite(); });
+
+// ---------- upscale ----------
+function unsharp(c, amount) {
+  if (amount <= 0) return c;
+  const x = c.getContext('2d'), id = x.getImageData(0, 0, c.width, c.height), d = id.data;
+  const P = blurRGB(d, c.width, c.height, 1), k = amount / 100;
+  for (let i = 0, n = c.width * c.height; i < n; i++)
+    for (let ch = 0; ch < 3; ch++) { const v = d[i * 4 + ch]; d[i * 4 + ch] = v + (v - P[ch][i]) * k; }
+  x.putImageData(id, 0, 0);
+  return c;
+}
+function canvasUp(c, factor) {       // multi-step ×2 resample (better than one big jump)
+  let cur = c;
+  for (let f = 1; f < factor; f *= 2) {
+    const n = mk(cur.width * 2, cur.height * 2), x = n.getContext('2d');
+    x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+    x.drawImage(cur, 0, 0, n.width, n.height);
+    cur = n;
+  }
+  return cur;
+}
+function hasAlpha(c) {
+  const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+  for (let i = 3; i < d.length; i += 16) if (d[i] < 250) return true;
+  return false;
+}
+let T = null, srModel = null, srDevice = '';
+async function loadSR() {
+  if (srModel) return srModel;
+  status('กำลังโหลด transformers.js…'); progress(.05);
+  T = await import(TF);
+  T.env.allowLocalModels = false;
+  const devices = [];
+  if (navigator.gpu) { try { if (await navigator.gpu.requestAdapter()) devices.push('webgpu'); } catch {} }
+  devices.push('wasm');
+  let lastErr;
+  for (const device of devices) {
+    try {
+      status(`กำลังโหลดโมเดล Swin2SR (${device})…`);
+      srModel = await T.AutoModel.from_pretrained(SR_MODEL, {
+        device, dtype: 'fp32',
+        progress_callback: p => { if (p.status === 'progress' && p.total > 1e6) { progress(p.loaded / p.total * .3); status(`ดาวน์โหลดโมเดล ${(p.loaded / 1e6).toFixed(1)}/${(p.total / 1e6).toFixed(1)} MB`); } },
+      });
+      srDevice = device;
+      // smoke test: a tiny tile must run on this device
+      await runTile(new Float32Array(3 * 16 * 16).fill(.5), 16, 16);
+      return srModel;
+    } catch (e) { console.warn('Swin2SR on', device, 'failed', e); lastErr = e; srModel = null; }
+  }
+  throw lastErr;
+}
+async function runTile(data, w, h) {
+  const out = await srModel({ pixel_values: new T.Tensor('float32', data, [1, 3, h, w]) });
+  const r = out.reconstruction;
+  return { data: r.data ?? await r.getData?.(), w: r.dims[3], h: r.dims[2] };
+}
+async function aiUp2(c) {
+  await loadSR();
+  const W = c.width, H = c.height, TILE = srDevice === 'webgpu' ? 192 : 128, OV = 12;
+  const id = c.getContext('2d').getImageData(0, 0, W, H).data;
+  const out = mk(W * 2, H * 2), ox = out.getContext('2d');
+  const tiles = [];
+  for (let y = 0; y < H; y += TILE) for (let x = 0; x < W; x += TILE) tiles.push([x, y]);
+  const t0 = performance.now();
+  for (let k = 0; k < tiles.length; k++) {
+    const [tx, ty] = tiles[k];
+    const tw = Math.min(TILE, W - tx), th = Math.min(TILE, H - ty);
+    const x0 = Math.max(0, tx - OV), y0 = Math.max(0, ty - OV), x1 = Math.min(W, tx + tw + OV), y1 = Math.min(H, ty + th + OV);
+    const iw = Math.ceil((x1 - x0) / 8) * 8, ih = Math.ceil((y1 - y0) / 8) * 8;   // window multiple, edge-replicated
+    const buf = new Float32Array(3 * iw * ih);
+    for (let y = 0; y < ih; y++) for (let x = 0; x < iw; x++) {
+      const sx = Math.min(x1 - 1, x0 + x), sy = Math.min(y1 - 1, y0 + y), si = (sy * W + sx) * 4, di = y * iw + x;
+      buf[di] = id[si] / 255; buf[iw * ih + di] = id[si + 1] / 255; buf[2 * iw * ih + di] = id[si + 2] / 255;
+    }
+    const r = await runTile(buf, iw, ih);
+    const s = r.w / iw;   // 2
+    const ow = tw * s, oh = th * s, ox0 = (tx - x0) * s, oy0 = (ty - y0) * s;
+    const img = ox.createImageData(ow, oh), plane = r.w * r.h;
+    for (let y = 0; y < oh; y++) for (let x = 0; x < ow; x++) {
+      const si = (oy0 + y) * r.w + ox0 + x, di = (y * ow + x) * 4;
+      img.data[di] = r.data[si] * 255; img.data[di + 1] = r.data[plane + si] * 255; img.data[di + 2] = r.data[2 * plane + si] * 255; img.data[di + 3] = 255;
+    }
+    ox.putImageData(img, tx * 2, ty * 2);
+    const el = (performance.now() - t0) / 1000, eta = el / (k + 1) * (tiles.length - k - 1);
+    progress(.3 + .7 * (k + 1) / tiles.length);
+    status(`AI ขยายภาพ บล็อก ${k + 1}/${tiles.length} · เหลือ ~${Math.ceil(eta)} วิ (${srDevice})`);
+    await frame();
+  }
+  return out;
+}
+$('#runUp').onclick = () => job(async () => {
+  const factor = +upScale(), engine = upEngine(), sharp = +$('#sharp').value;
+  let input = src, note = '';
+  const maxIn = Math.floor(Math.sqrt(MAX_OUT_AREA / (factor * factor * (src.width / src.height))) * (src.width / src.height));
+  if (src.width > maxIn) { // keep output ≤ 16 MP
+    const s = maxIn / src.width; input = mk(Math.round(src.width * s), Math.round(src.height * s));
+    input.getContext('2d').drawImage(src, 0, 0, input.width, input.height); note = ` (ย่อก่อนเพื่อไม่ให้เกิน 16 MP)`;
+  }
+  let out, used;
+  if (engine === 'ai') {
+    try {
+      let aiIn = input;
+      if (Math.max(input.width, input.height) > AI_MAX_IN) {
+        const s = AI_MAX_IN / Math.max(input.width, input.height);
+        aiIn = mk(Math.round(input.width * s), Math.round(input.height * s));
+        aiIn.getContext('2d').imageSmoothingQuality = 'high';
+        aiIn.getContext('2d').drawImage(input, 0, 0, aiIn.width, aiIn.height);
+        note += ` (ย่อเหลือ ${aiIn.width}×${aiIn.height} ก่อนเข้า AI)`;
+      }
+      const alpha = hasAlpha(aiIn);
+      out = await aiUp2(aiIn);
+      if (alpha) { // model is RGB-only: carry transparency over from a canvas resample
+        const a = canvasUp(aiIn, 2).getContext('2d').getImageData(0, 0, out.width, out.height).data;
+        const ox = out.getContext('2d'), id = ox.getImageData(0, 0, out.width, out.height);
+        for (let i = 3; i < a.length; i += 4) id.data[i] = a[i];
+        ox.putImageData(id, 0, 0);
+      }
+      used = `AI Swin2SR ×2 (${srDevice === 'webgpu' ? 'WebGPU' : 'WASM/CPU'})`;
+      if (factor === 4) { out = canvasUp(out, 2); used += ' + Canvas ×2'; }
+      if (sharp) unsharp(out, sharp * (factor === 4 ? .8 : .4));
+    } catch (e) {
+      console.warn(e);
+      toast('AI ใช้งานไม่ได้ในเครื่องนี้ — สลับไปใช้ Canvas', 4000);
+      out = null; note += ' · AI ล้มเหลว: ' + (e.message || e).toString().slice(0, 80);
+    }
+  }
+  if (!out) {
+    status('กำลังขยายแบบ Canvas…'); await frame();
+    out = unsharp(canvasUp(input, factor), sharp);
+    used = `Canvas หลายขั้น ×${factor} + unsharp mask`;
+  }
+  setResult(out, hasAlpha(src) ? 'none' : 'up');
+  progress(1);
+  $('#engine').textContent = 'ใช้: ' + used + note;
+  status(`ขยายเสร็จ ${out.width}×${out.height} ✓`, 'ok');
+  if (zoom === 1) { $('#zoom').value = 2; $('#zoom').oninput({ target: $('#zoom') }); }
+});
+
+// ---------- filters ----------
+function gray(d, n) { const g = new Float32Array(n); for (let i = 0; i < n; i++) g[i] = d[i * 4] * .299 + d[i * 4 + 1] * .587 + d[i * 4 + 2] * .114; return g; }
+function sobel(g, w, h) {
+  const m = new Float32Array(w * h);
+  for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+    const i = y * w + x;
+    const gx = -g[i - w - 1] - 2 * g[i - 1] - g[i + w - 1] + g[i - w + 1] + 2 * g[i + 1] + g[i + w + 1];
+    const gy = -g[i - w - 1] - 2 * g[i - w] - g[i - w + 1] + g[i + w - 1] + 2 * g[i + w] + g[i + w + 1];
+    m[i] = Math.hypot(gx, gy);
+  }
+  return m;
+}
+function applyFx() {
+  const mode = fxMode(), A = +$('#fxA').value, B = +$('#fxB').value / 100;
+  const s = Math.min(1, 2000 / Math.max(src.width, src.height));
+  const c = mk(Math.round(src.width * s), Math.round(src.height * s)), x = c.getContext('2d');
+  x.drawImage(src, 0, 0, c.width, c.height);
+  const W = c.width, H = c.height, n = W * H, id = x.getImageData(0, 0, W, H), d = id.data;
+  const k = Math.max(1, Math.round(Math.max(W, H) / 900));   // scale radii with resolution
+  if (mode === 'cartoon') {
+    const P = blurRGB(d, W, H, 2 * k);                      // flatten texture
+    const g = blurChannel(gray(d, n), W, H, k), e = sobel(g, W, H);
+    const thr = 150 - B * 110, lv = A;
+    for (let i = 0; i < n; i++) {
+      let r = P[0][i], gg = P[1][i], b = P[2][i];
+      const l = r * .299 + gg * .587 + b * .114;
+      r = l + (r - l) * 1.3; gg = l + (gg - l) * 1.3; b = l + (b - l) * 1.3;   // saturation
+      // toon shading: quantise brightness only, keep the hue
+      const ql = (Math.min(lv - 1, Math.floor(l / 256 * lv)) + .5) * 256 / lv, f = ql / Math.max(8, l);
+      const edge = B > 0 && e[i] > thr ? Math.max(.08, 1 - (e[i] - thr) / 50) : 1;
+      d[i * 4] = Math.min(255, r * f) * edge; d[i * 4 + 1] = Math.min(255, gg * f) * edge; d[i * 4 + 2] = Math.min(255, b * f) * edge;
+    }
+  } else if (mode === 'sketch') {
+    const g = gray(d, n), inv = new Float32Array(n);
+    for (let i = 0; i < n; i++) inv[i] = 255 - g[i];
+    blurChannel(inv, W, H, Math.round((3 + B * 12) * k));
+    const gamma = 1 + A / 3;
+    for (let i = 0; i < n; i++) {
+      let v = Math.min(255, g[i] * 255 / Math.max(1, 255 - inv[i]));   // colour dodge
+      v = 255 * Math.pow(v / 255, gamma);
+      d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = v;
+    }
+  } else if (mode === 'poster') {
+    const step = 255 / (A - 1), sat = .6 + B * 1.4;
+    for (let i = 0; i < n; i++) {
+      const l = (d[i * 4] + d[i * 4 + 1] + d[i * 4 + 2]) / 3;
+      for (let ch = 0; ch < 3; ch++) d[i * 4 + ch] = Math.round(Math.min(255, Math.max(0, l + (d[i * 4 + ch] - l) * sat)) / step) * step;
+    }
+  } else if (mode === 'neon') {
+    const g = blurChannel(gray(d, n), W, H, k), e = sobel(g, W, H);
+    const glow = Float32Array.from(e); blurChannel(glow, W, H, 3 * k);
+    const gain = A / 6;
+    for (let i = 0; i < n; i++) {
+      const v = Math.min(1, e[i] / 255 * gain), gl = Math.min(1, glow[i] / 160 * gain), base = g[i] * B * .5;
+      d[i * 4] = Math.min(255, base * .3 + v * 140 + gl * 20);
+      d[i * 4 + 1] = Math.min(255, base * .8 + v * 255 + gl * 140);
+      d[i * 4 + 2] = Math.min(255, base + v * 255 + gl * 200);
+    }
+  }
+  x.putImageData(id, 0, 0);
+  setResult(c, 'fx-' + mode);
+  status('ใช้ฟิลเตอร์แล้ว ✓', 'ok'); progress(1);
+}
+$('#runFx').onclick = () => job(async () => { status('กำลังประมวลผล…'); progress(.4); await frame(); applyFx(); });
+
+// ---------- output ----------
+function outBlob() {
+  const png = resultKind === 'none' || hasAlpha(result);
+  return new Promise(r => result.toBlob(r, png ? 'image/png' : 'image/jpeg', .92)).then(b => [b, png ? 'png' : 'jpg']);
+}
+$('#dl').onclick = async () => {
+  const [b, ext] = await outBlob();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(b); a.download = `ksd-imagelab-${Date.now()}.${ext}`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+};
+$('#share').onclick = async () => {
+  const [b, ext] = await outBlob();
+  const f = new File([b], `ksd-imagelab.${ext}`, { type: b.type });
+  if (navigator.canShare?.({ files: [f] })) { try { await navigator.share({ files: [f] }); } catch {} }
+  else $('#dl').click();
+};
+$('#chain').onclick = () => {
+  if (!result) return;
+  src = result; mask = null; setResult(null); $('#reset').disabled = false;
+  status(`ใช้ผลลัพธ์เป็นต้นฉบับแล้ว (${src.width}×${src.height})`);
+};
+$('#reset').onclick = () => { src = original; mask = null; setResult(null); $('#reset').disabled = true; status('กลับเป็นต้นฉบับแล้ว'); };
+</script>
+</body>
+</html>

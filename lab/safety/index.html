@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#01070c">
+<title>SAFETY//CAM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../common/lab.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="main">
+  <section class="left">
+    <div class="stage" id="stage">
+      <video id="video" playsinline muted></video>
+      <canvas id="cv"></canvas>
+      <div id="hud"><span id="hudN">คน 0</span><span id="hudFps"></span></div>
+      <div id="alarm" hidden></div>
+    </div>
+    <div class="cam-bar">
+      <button class="btn" id="btnFlip">⟲ สลับกล้อง</button>
+      <label class="btn" id="btnFile">📁 ไฟล์วิดีโอ<input type="file" accept="video/*" id="file" hidden></label>
+      <button class="btn" id="btnPause">⏸ หยุด</button>
+      <button class="btn" id="btnMute">🔊 เสียง</button>
+    </div>
+  </section>
+
+  <section class="right">
+    <div id="people"></div>
+    <div class="panel">
+      <div class="tabs"><button class="btn on" data-tab="log">บันทึกเหตุการณ์ <b id="logN">0</b></button><button class="btn" data-tab="set">ตั้งค่า / ปรับค่า</button></div>
+      <div id="tab-log">
+        <div class="row">
+          <button class="btn" id="dlCsv">⬇ CSV</button>
+          <button class="btn" id="dlZip">⬇ รูป + CSV (.zip)</button>
+          <button class="btn" id="clearLog">🗑 ล้าง</button>
+        </div>
+        <p class="note">เก็บในหน่วยความจำของหน้านี้เท่านั้น (สูงสุด 300 รายการ) — ปิด/รีเฟรชหน้าแล้วหาย ดาวน์โหลดเก็บไว้ก่อน</p>
+        <div id="log"></div>
+      </div>
+      <div id="tab-set" hidden>
+        <h3>อุปกรณ์ที่บังคับ</h3>
+        <div class="checks">
+          <label><input type="checkbox" data-k="needHat"> ⛑ หมวกนิรภัย</label>
+          <label><input type="checkbox" data-k="needVest"> 🦺 เสื้อสะท้อนแสง</label>
+          <label><input type="checkbox" data-k="fall"> 🚨 ตรวจจับคนล้ม</label>
+        </div>
+        <h3>สีหมวกที่ยอมรับ</h3>
+        <div class="checks" id="hatColors"></div>
+        <h3>ค่าความไว</h3>
+        <div id="sliders"></div>
+        <div class="checks">
+          <label><input type="checkbox" data-k="sound"> 🔊 เสียงเตือน</label>
+          <label><input type="checkbox" data-k="debug"> 🔬 แสดงจุดสุ่มสี (debug)</label>
+        </div>
+        <p><button class="btn" id="reset">คืนค่าเริ่มต้น</button></p>
+      </div>
+    </div>
+    <div class="panel honest">
+      <b>⚠ ข้อจำกัด — โปรดอ่าน</b>
+      <p>หมวก/เสื้อตรวจด้วย <b>การวิเคราะห์สี (color heuristic)</b> บริเวณเหนือใบหน้าและลำตัว <b>ไม่ใช่โมเดล AI ที่ฝึกมาเพื่อตรวจ PPE</b> จึงพลาดได้ เช่น ผนังสีขาว/เหลืองด้านหลังศีรษะ เสื้อยืดสีเหลืองทั่วไป แสงน้อย คนหันหลัง หรืออยู่ไกลกล้อง · การตรวจคนล้มใช้มุมลำตัวจาก PoseLandmarker</p>
+      <p>ใช้เป็น <b>ตัวช่วยเตือน</b> เท่านั้น ไม่แทนเจ้าหน้าที่ความปลอดภัย · ภาพประมวลผลในเครื่อง ไม่ส่งออกไปไหน</p>
+    </div>
+  </section>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#01070c">
+<title>SPECTRO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../common/lab.css">
+<style>
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 14px; padding: 14px 16px; max-width: 1400px; margin: 0 auto; }
+  #spec { width: 100%; height: calc(100vh - 190px); min-height: 300px; display: block; border: 1px solid var(--line); background: #000; }
+  .ctl { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; font-size: 13px; color: var(--dim); }
+  .side { display: flex; flex-direction: column; gap: 10px; }
+  .meters { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .meter { border: 1px solid var(--line); padding: 8px 10px; }
+  .meter span { font-size: 12px; color: var(--dim); display: block; }
+  .meter b { font-family: var(--mono); font-weight: normal; font-size: 26px; color: var(--c); }
+  .cls { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; font-size: 14px; padding: 6px 0; border-bottom: 1px solid rgba(60, 231, 255, .08); }
+  .cls small { color: var(--dim); font-size: 11px; }
+  .cls .bar { grid-column: 1 / -1; height: 5px; background: rgba(60, 231, 255, .12); }
+  .cls .bar i { display: block; height: 100%; background: var(--c); box-shadow: 0 0 8px var(--c); }
+  .cls.alert b { color: var(--bad); } .cls.alert .bar i { background: var(--bad); box-shadow: 0 0 8px var(--bad); }
+  #log { font-size: 13px; max-height: 220px; overflow: auto; }
+  #log div { padding: 4px 0; border-bottom: 1px solid rgba(60, 231, 255, .08); }
+  #log time { font-family: var(--mono); color: var(--dim); font-size: 11px; margin-right: 6px; }
+  #log .alert { color: var(--bad); }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } #spec { height: 52vh; } }
+</style>
+</head>
+<body class="scanlines">
+<main>
+  <section>
+    <canvas id="spec"></canvas>
+    <div class="ctl">
+      <div class="seg" id="view"><button class="btn on" data-v="3d">⛰ 3D</button><button class="btn" data-v="2d">▦ Spectrogram</button></div>
+      <div class="seg" id="band"><button class="btn on" data-v="8000">0–8 kHz (เสียงพูด)</button><button class="btn" data-v="24000">0–24 kHz (เต็ม/อัลตราโซนิก)</button></div>
+    </div>
+  </section>
+  <section class="side">
+    <div class="meters">
+      <div class="meter"><span>ระดับเสียง (สัมพัทธ์)</span><b id="db">--</b></div>
+      <div class="meter"><span>ความถี่เด่น / โน้ต</span><b id="pitch">--</b></div>
+    </div>
+    <div class="panel"><h2>🧠 AI ฟังว่าเป็นเสียงอะไร</h2><div id="cls" class="sub">กำลังโหลดโมเดล YAMNet (521 ประเภท)…</div></div>
+    <div class="panel"><h2>📝 เหตุการณ์เสียง</h2><div id="log" class="sub">ยังไม่มี</div></div>
+    <p class="note">ระดับเสียงเป็นค่าสัมพัทธ์ (dBFS) ไม่ใช่ dB(A) ของเครื่องวัดจริง · AI ประมวลผลในเครื่อง ไม่ส่งเสียงออกไปไหน</p>
+  </section>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>

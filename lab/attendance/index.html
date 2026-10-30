@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#01070c">
+<title>FACE//TIME</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../common/lab.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="main">
+  <section class="left">
+    <div class="stage" id="stage">
+      <video id="video" class="mirror" playsinline muted></video>
+      <canvas id="cv"></canvas>
+      <div id="prompt"></div>
+      <div id="result" hidden></div>
+    </div>
+    <div class="modebar">
+      <span class="note">โหมด:</span>
+      <div class="seg" id="mode">
+        <button class="btn on" data-m="auto">อัตโนมัติ</button>
+        <button class="btn" data-m="in">เข้างาน</button>
+        <button class="btn" data-m="out">ออกงาน</button>
+      </div>
+      <span id="clock"></span>
+    </div>
+  </section>
+
+  <section class="right panel">
+    <nav class="tabs">
+      <button class="btn on" data-tab="today">วันนี้</button>
+      <button class="btn" data-tab="enrol">ลงทะเบียน</button>
+      <button class="btn" data-tab="emps">พนักงาน</button>
+      <button class="btn" data-tab="report">รายงาน</button>
+      <button class="btn" data-tab="set">⚙</button>
+    </nav>
+
+    <div data-pane="today">
+      <div class="stat"><div><b id="nIn">0</b><span>อยู่ในงาน</span></div><div><b id="nOut">0</b><span>ออกแล้ว</span></div><div><b id="nAll">0</b><span>พนักงานทั้งหมด</span></div></div>
+      <h3>ลงเวลาวันนี้</h3>
+      <div id="todayList"></div>
+    </div>
+
+    <div data-pane="enrol" hidden>
+      <form id="enrolForm" autocomplete="off">
+        <label>รหัสพนักงาน<input type="text" id="eId" required maxlength="20" pattern="[A-Za-z0-9_\-]+" placeholder="เช่น E0012"></label>
+        <label>ชื่อ-สกุล<input type="text" id="eName" required maxlength="80"></label>
+        <label>แผนก<input type="text" id="eDept" maxlength="60" list="depts"></label>
+        <datalist id="depts"></datalist>
+        <div class="consent">
+          <label><input type="checkbox" id="eConsent"> <span><b>ยินยอมให้เก็บข้อมูลใบหน้า (PDPA)</b><br>
+          ข้าพเจ้ายินยอมให้เก็บ <b>ข้อมูลชีวภาพ</b> (ลักษณะใบหน้าในรูปตัวเลข 128 ค่า — <u>ไม่เก็บรูปภาพ</u>) เพื่อใช้ลงเวลาทำงานเท่านั้น
+          และทราบว่าขอถอนความยินยอม/ให้ลบข้อมูลได้ทุกเมื่อ · ข้อมูลชีวภาพเป็นข้อมูลส่วนบุคคลอ่อนไหวตาม พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล มาตรา 26 ต้องได้รับความยินยอมโดยชัดแจ้ง</span></label>
+        </div>
+        <div class="row">
+          <button type="button" class="btn" id="btnCapture">📸 เก็บตัวอย่างใบหน้า (5 ภาพ)</button>
+          <button type="submit" class="btn primary" id="btnSave" disabled>💾 บันทึก</button>
+        </div>
+        <div id="samples"></div>
+        <p class="note" id="enrolMsg">มองกล้องตรงๆ แสงสว่างพอ ไม่ใส่แมสก์/แว่นดำ ระหว่างเก็บภาพให้ขยับหน้าเล็กน้อย</p>
+      </form>
+    </div>
+
+    <div data-pane="emps" hidden>
+      <div class="row"><input type="text" id="empQ" placeholder="ค้นหา รหัส/ชื่อ/แผนก"><span class="note" id="empN"></span></div>
+      <div id="empList"></div>
+      <p class="note">การลบจะลบข้อมูลใบหน้า (face descriptor) ออกทันที ใช้เมื่อพนักงานขอถอนความยินยอมหรือพ้นสภาพ</p>
+    </div>
+
+    <div data-pane="report" hidden>
+      <div class="row"><input type="date" id="rDate"><button class="btn" id="rCsv">⬇ CSV</button><button class="btn" id="rCsvRaw">⬇ CSV ทุกรายการ</button></div>
+      <div id="report"></div>
+    </div>
+
+    <div data-pane="set" hidden>
+      <label class="sl"><span>ค่าความเหมือน (Euclidean threshold)</span><output id="oThr"></output><input type="range" id="sThr" min="0.3" max="0.7" step="0.01"><small>ต่ำ = เข้มงวด (ปฏิเสธคนอื่นได้ดี แต่อาจไม่รู้จักตัวจริง) · แนะนำ 0.45–0.55</small></label>
+      <label class="sl"><span>กันลงเวลาซ้ำภายใน</span><output id="oCool"></output><input type="range" id="sCool" min="10" max="600" step="10"></label>
+      <div class="checks">
+        <label><input type="checkbox" id="sLive"> 🛡 ตรวจว่าเป็นคนจริง (กะพริบตา/หันหน้า)</label>
+        <label><input type="checkbox" id="sSound"> 🔊 เสียง</label>
+      </div>
+      <h3>ที่เก็บข้อมูล</h3>
+      <p class="note" id="storeInfo"></p>
+      <h3>ข้อจำกัด</h3>
+      <p class="note">การตรวจคนจริงแบบง่ายนี้กันรูปถ่าย/รูปบนจอได้ระดับหนึ่ง แต่กันวิดีโอที่เล่นซ้ำหรือหน้ากากไม่ได้ · ความแม่นยำขึ้นกับแสงและมุมกล้อง ควรมีเจ้าหน้าที่ตรวจรายงานเป็นระยะ · ใช้ face-api (โมเดลเปิด) ประมวลผลในเครื่อง ไม่ส่งภาพออก</p>
+    </div>
+  </section>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>

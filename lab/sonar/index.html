@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#01070c">
+<title>SONAR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../common/lab.css">
+<style>
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 14px; padding: 14px 16px; max-width: 1300px; margin: 0 auto; }
+  .viz { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  #fan { width: 100%; aspect-ratio: 2 / 1.08; display: block; }
+  #water { width: 100%; height: 190px; display: block; border: 1px solid var(--line); background: #000; }
+  .side { display: flex; flex-direction: column; gap: 10px; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat { border: 1px solid var(--line); padding: 10px; }
+  .stat span { display: block; font-size: 12px; color: var(--dim); }
+  .stat b { font-family: var(--mono); font-weight: normal; font-size: 34px; color: var(--c); text-shadow: 0 0 10px var(--c); }
+  .stat b small { font-size: 14px; color: var(--dim); }
+  #state { font-size: 15px; padding: 10px; border: 1px solid var(--line); border-left: 4px solid var(--dim); }
+  #state.move { border-left-color: var(--warn); color: var(--warn); }
+  #state.alarm { border-left-color: var(--bad); color: #fff; background: rgba(255, 77, 109, .25); animation: lab-blink .6s infinite; }
+  #breath { width: 100%; height: 70px; display: block; border: 1px solid var(--line); }
+  .row { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--dim); }
+  .row input[type=range] { flex: 1; }
+  #log { font-family: var(--mono); font-size: 12px; max-height: 150px; overflow: auto; border: 1px solid var(--line); padding: 6px 8px; }
+  #log div { padding: 1px 0; }
+  .lbl { font-size: 12px; color: var(--dim); display: flex; justify-content: space-between; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; padding: 10px 16px; } #water { height: 150px; } }
+</style>
+</head>
+<body class="scanlines">
+<main>
+  <section class="viz">
+    <canvas id="fan"></canvas>
+    <div class="lbl"><span>แผนที่เสียงสะท้อน: แกนนอน = ระยะ · ลงล่าง = เวลา</span><span id="sig"></span></div>
+    <canvas id="water"></canvas>
+  </section>
+  <section class="side">
+    <div id="state">กำลังเตรียม…</div>
+    <div class="stats">
+      <div class="stat"><span>สิ่งเคลื่อนไหว (ประมาณจำนวนคน)</span><b id="count">--</b></div>
+      <div class="stat"><span>ใกล้สุด</span><b id="near">--<small> ม.</small></b></div>
+      <div class="stat"><span>การหายใจ (นั่งนิ่ง ≤ 1.5 ม.)</span><b id="rpm">--<small> /นาที</small></b></div>
+      <div class="stat"><span>ระยะ</span><b id="breathR">--<small> ม.</small></b></div>
+    </div>
+    <canvas id="breath"></canvas>
+    <div class="seg" id="modes">
+      <button class="btn on" data-m="watch">👁 ตรวจจับ</button>
+      <button class="btn" data-m="guard">🚨 กันขโมย</button>
+      <button class="btn" data-m="gesture">✋ ท่าทางมือ</button>
+    </div>
+    <div class="row">ระยะสูงสุด <select id="range"><option value="2">2 ม.</option><option value="3">3 ม.</option><option value="4" selected>4 ม.</option></select>
+      <button class="btn" id="recal">↺ ปรับเทียบใหม่</button></div>
+    <div class="row">ความไว <input type="range" id="sens" min="2" max="10" step="0.5" value="5.5"></div>
+    <div class="row">ความดัง <input type="range" id="vol" min="0.05" max="1" step="0.05" value="0.6"></div>
+    <div id="log"></div>
+    <p class="note">ส่งคลื่น 18–21 kHz (ผู้ใหญ่ส่วนใหญ่ไม่ได้ยิน แต่เด็ก/สัตว์เลี้ยงอาจได้ยิน) · รู้ <b>ระยะ</b> แต่ไม่รู้ทิศซ้าย-ขวา · ระบุตัวบุคคลไม่ได้ · ไม่ทะลุผนัง · คนสองคนที่ห่างจากเครื่องเท่ากันจะนับเป็นหนึ่ง · วางเครื่องนิ่งๆ ลำโพงหันเข้าห้อง</p>
+  </section>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>
